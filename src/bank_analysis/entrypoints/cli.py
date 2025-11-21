@@ -2,7 +2,6 @@ import argparse
 from ..adapters.csv_loader import CsvDataLoader
 from ..usecases.analyze_budget import AnalyzeBudgetUseCase
 from ..adapters.stdout_presenter import StdoutPresenter
-from ..domain import analysis as domain_analysis
 
 def choose_file_interactive(files):
     print("Available CSV files:")

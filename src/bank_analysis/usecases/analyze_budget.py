@@ -1,5 +1,4 @@
-from typing import Optional, Protocol
-import pandas as pd
+from typing import Optional
 from ..ports.presenter import PresenterPort
 from ..ports.loader import DataLoaderPort
 from ..domain import analysis as domain_analysis
