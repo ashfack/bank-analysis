@@ -144,9 +144,12 @@ def main():
     print(f"Average savings vs theoretical salary (3700 €): {aggregates['mean_savings_vs_theoretical']:.2f} €")
 
     # Advanced mode: category breakdown
-    category_breakdown = compute_category_breakdown(df)
-    print("\n=== Category Breakdown (Advanced Mode) ===")
-    print(category_breakdown.to_string(index=False))
+     # Ask if user wants category breakdown
+    choice = input("\nDo you want to see the category breakdown ? (y/n): ").strip().lower()
+    if choice == "y":
+        category_breakdown = compute_category_breakdown(df)
+        print("\n=== Category Breakdown (Advanced Mode) ===")
+        print(category_breakdown.to_string(index=False))
 
     # Export option
     export_choice = input("\nDo you want to export the filtered summary and category breakdown to CSV? (y/n): ").strip().lower()
