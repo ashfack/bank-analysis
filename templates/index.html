@@ -8,6 +8,22 @@
 <body>
   <div class="container">
     <h1>Bank Analysis</h1>
+
+    <p>
+      From a bank transaction export, we want to generate monthly insights including:
+      <br/>
+
+          The total salaries received.<br/>
+          The total expenses incurred.<br/>
+          The total savings for the month.<br/>
+          The total savings compared to your theoretical average salary (i.e., excluding on-call bonuses, exceptional increases, etc.).<br/>
+          The number of expense transactions per month.<br/>
+          The ability to compute averages, with an option to exclude outliers (such as negative months or months with exceptional circumstances).<br/>
+          An advanced mode that provides a detailed breakdown for each month by expense category, including both the total amount and the number of transactions per category.<br/>
+
+
+    </p>
+
     {% with messages = get_flashed_messages() %}
       {% if messages %}
         <ul class="flashes">
@@ -17,11 +33,16 @@
     {% endwith %}
 
     <form action="{{ url_for('analyze') }}" method="post" enctype="multipart/form-data">
-      <label>Upload CSV file (columns: dateOp;dateVal;label;category;categoryParent;supplierFound;amount;comment;accountNum;accountLabel;accountbalance):</label>
+      <label>Upload CSV file (columns: <br/>
+        - dateOp<br/>
+        - category<br/>
+        - categoryParent<br/>
+        - amount<br/>
+        No matter the order but these should be the names):</label>
       <input type="file" name="file" accept=".csv,.txt">
 
       <p>Or paste CSV content here:</p>
-      <textarea name="csv_text" rows="10" cols="80" placeholder="dateOp;dateVal;label;category;categoryParent;supplierFound;amount;comment;accountNum;accountLabel;accountbalance"></textarea>
+      <textarea name="csv_text" rows="10" cols="80" placeholder="columns: dateOp;category;categoryParent;amount; No matter the order but these should be the names and you can have more columns"></textarea>
 
       <p><button type="submit">Analyze</button></p>
     </form>
