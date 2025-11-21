@@ -2,6 +2,7 @@ from flask import Flask, request, render_template, redirect, url_for, flash, jso
 import pandas as pd
 import io
 from analysis import analyze_dataframe
+from src.bank_analysis.adapters.csv_loader import CsvDataLoader
 
 app = Flask(__name__)
 app.secret_key = "change-me-in-production"
@@ -33,7 +34,8 @@ def analyze():
         return redirect(url_for("index"))
 
     try:
-        df = pd.read_csv(io.StringIO(csv_text))
+        loader = CsvDataLoader(base_path=".")
+        df = loader.load_and_prepare(csv_text, False)
     except Exception as e:
         flash(f"Could not parse CSV: {e}")
         return redirect(url_for("index"))
