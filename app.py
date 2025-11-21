@@ -1,0 +1,67 @@
+from flask import Flask, request, render_template, redirect, url_for, flash, jsonify
+import pandas as pd
+import io
+from analysis import analyze_dataframe
+
+app = Flask(__name__)
+app.secret_key = "change-me-in-production"
+
+ALLOWED_EXTENSIONS = {"csv", "txt"}
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route("/", methods=["GET"])
+def index():
+    return render_template("index.html")
+
+@app.route("/analyze", methods=["POST"])
+def analyze():
+    # Accept file upload OR pasted CSV text
+    csv_text = None
+    if "file" in request.files and request.files["file"].filename != "":
+        f = request.files["file"]
+        if not allowed_file(f.filename):
+            flash("Only CSV or TXT files are allowed.")
+            return redirect(url_for("index"))
+        csv_text = f.read().decode("utf-8")
+    else:
+        csv_text = request.form.get("csv_text", "").strip()
+
+    if not csv_text:
+        flash("Please upload a CSV file or paste CSV data.")
+        return redirect(url_for("index"))
+
+    try:
+        df = pd.read_csv(io.StringIO(csv_text))
+    except Exception as e:
+        flash(f"Could not parse CSV: {e}")
+        return redirect(url_for("index"))
+
+    # Call your refactored analysis function
+    results = analyze_dataframe(df)
+
+    # results should be JSON-serializable dict with keys used in the template
+    return render_template("results.html", results=results)
+
+@app.route("/api/analyze", methods=["POST"])
+def api_analyze():
+    # JSON API: accept CSV string in JSON or uploaded file
+    data = request.get_json(silent=True) or {}
+    csv_text = data.get("csv")
+    if not csv_text and "file" in request.files:
+        csv_text = request.files["file"].read().decode("utf-8")
+
+    if not csv_text:
+        return jsonify({"error": "No CSV provided"}), 400
+
+    try:
+        df = pd.read_csv(io.StringIO(csv_text))
+    except Exception as e:
+        return jsonify({"error": f"Could not parse CSV: {e}"}), 400
+
+    results = analyze_dataframe(df)
+    return jsonify(results)
+
+if __name__ == "__main__":
+    app.run(debug=True)

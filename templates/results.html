@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Bank Analysis - Results</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>Analysis Results</h1>
+    <p>Rows: {{ results.n_rows }} — Total amount: {{ results.total }}</p>
+
+    <h2>By category</h2>
+    <canvas id="categoryChart" width="600" height="300"></canvas>
+
+    <h2>Monthly totals</h2>
+    <canvas id="monthlyChart" width="600" height="300"></canvas>
+
+    <h2>Sample rows</h2>
+    <table>
+      <thead>
+        <tr>
+          {% if results.sample_rows and results.sample_rows[0] %}
+            {% for k in results.sample_rows[0].keys() %}
+              <th>{{ k }}</th>
+            {% endfor %}
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in results.sample_rows %}
+          <tr>
+            {% for v in row.values() %}
+              <td>{{ v }}</td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <p><a href="{{ url_for('index') }}>Back</a></p>
+  </div>
+
+  <script>
+    const catLabels = {{ results.categories | map(attribute='category') | list | tojson }};
+    const catData = {{ results.categories | map(attribute='total') | list | tojson }};
+
+    new Chart(document.getElementById('categoryChart'), {
+      type: 'bar',
+      data: {
+        labels: catLabels,
+        datasets: [{ label: 'Amount', data: catData, backgroundColor: 'rgba(54, 162, 235, 0.6)' }]
+      },
+      options: { responsive: true }
+    });
+
+    const months = {{ results.monthly | map(attribute='month') | list | tojson }};
+    const monthData = {{ results.monthly | map(attribute='total') | list | tojson }};
+
+    new Chart(document.getElementById('monthlyChart'), {
+      type: 'line',
+      data: {
+        labels: months,
+        datasets: [{ label: 'Monthly total', data: monthData, fill: false, borderColor: 'rgba(255,99,132,1)' }]
+      },
+      options: { responsive: true }
+    });
+  </script>
+</body>
+</html>

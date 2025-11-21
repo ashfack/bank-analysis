@@ -1,62 +1,18 @@
-# Bank Analysis Project
+````markdown name=README.md
+```markdown
+# Bank Analysis - Web UI (Flask)
 
-From a bank transaction export, we want to generate monthly insights including:
+This PR adds a small Flask-based web UI scaffold to convert the CLI analysis into a browser-based UI using Flask and simple HTML templates.
 
-The total salaries received.<br/>
-The total expenses incurred.<br/>
-The total savings for the month.<br/>
-The total savings compared to your theoretical average salary (i.e., excluding on-call bonuses, exceptional increases, etc.).<br/>
-The number of expense transactions per month.<br/>
-The ability to compute averages, with an option to exclude outliers (such as negative months or months with exceptional circumstances).<br/>
-An advanced mode that provides a detailed breakdown for each month by expense category, including both the total amount and the number of transactions per category.<br/>
+Quick start:
+1. Create a virtualenv and activate it.
+2. pip install -r requirements.txt
+3. export FLASK_APP=app.py
+4. flask run
+5. Open http://127.0.0.1:5000 in your browser.
 
-The implementation is in Python 3.
-
-## Structure
-- adapters 
-- domain
-- entrypoints
-- ports
-- usecases
-
-
-This is a trial at Hexagonal Architecture and here are some reminders:
-<br/>
-Domain must NOT import or call Adapters or Entrypoints.<br/>
-Domain code should not import CSV loader, DB code, HTTP code, filesystem code, or any I/O.<br/>
-Domain must NOT depend on concrete Presenter implementations or DB libraries.<br/>
-It can depend on Ports (interfaces) only if you choose to define output ports in domain, but it's often better to keep ports in their own layer imported by both domain/use-cases and adapters.<br/>
-<br/>
-
-Use-cases (application) must NOT import concrete Adapters directly (except to be wired at bootstrap).<br/>
-Use-cases depend on Ports (interfaces) and Domain; wiring code (entrypoint/bootstrap) provides adapter instances that implement those ports.<br/>
-<br/>
-
-Ports must NOT import Adapters or Entrypoints.<br/>
-Ports are plain interfaces/protocols only; implementations live outside.<br/>
-<br/>
-
-Adapters must NOT call Domain internals other than via the ports they implement or by invoking use-cases through ports — they implement the port interfaces and can call domain models where appropriate, but they must not import/use private domain internals that break encapsulation.<br/>
-<br/>
-
-Entrypoints/UI must NOT contain domain/business logic; they may call use-cases and present results.<br/>
-
-Allowed interactions (examples)<br/>
-<br/>
-
-Entrypoints → Use-cases<br/>
-Use-cases → Domain (invoke domain functions/entities)<br/>
-Use-cases → Ports (call repository or output ports)<br/>
-Adapters → Ports (implement repository/presenter interfaces)<br/>
-Adapters → Domain models (only for constructing/transforming data) — but avoid business logic here<br/>
-
-
-## Exécution
-```bash
-python main.py
-```
-
-## Tests
-```bash
-pytest --maxfail=1 --disable-warnings -q
+How to integrate with your existing code:
+- Move the core analysis logic from the CLI script into analysis.py and export a function analyze_dataframe(df) (see analysis.py).
+- Update the Flask app to import and use analyze_dataframe.
+- If the CLI currently reads files directly, refactor file-reading to a small adapter that produces a pandas.DataFrame. The web UI will call the same analysis routine.
 ```

@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Bank Analysis - Upload</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>Bank Analysis</h1>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul class="flashes">
+          {% for m in messages %}<li>{{ m }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <form action="{{ url_for('analyze') }}" method="post" enctype="multipart/form-data">
+      <label>Upload CSV file (columns: date, amount, category, description):</label>
+      <input type="file" name="file" accept=".csv,.txt">
+
+      <p>Or paste CSV content here:</p>
+      <textarea name="csv_text" rows="10" cols="80" placeholder="date,amount,category,description\n2025-01-01,-23.5,groceries,Supermarket"></textarea>
+
+      <p><button type="submit">Analyze</button></p>
+    </form>
+  </div>
+</body>
+</html>
