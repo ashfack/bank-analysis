@@ -1,6 +1,7 @@
 from flask import Flask, request, render_template, redirect, url_for, flash, jsonify
 import pandas as pd
 import io
+import os
 from analysis import analyze_dataframe
 from src.bank_analysis.adapters.csv_loader import CsvDataLoader
 
@@ -66,4 +67,5 @@ def api_analyze():
     return jsonify(results)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port, debug=True)
