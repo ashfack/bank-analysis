@@ -33,7 +33,7 @@ def parse_amount(value):
         except Exception:
             return pd.NA
 
-class CsvDataLoader(DataLoaderPort):
+class CsvFileDataLoader(DataLoaderPort):
     """CSV adapter tuned to demo.csv (semicolon sep, comma decimals)."""
 
     def __init__(self, base_path: str = "."):
@@ -44,14 +44,11 @@ class CsvDataLoader(DataLoaderPort):
         return files
     
 
-    def read_csv_content(self, source: str, is_path: bool = True) -> pd.DataFrame:
+    def read_csv_content(self, source: str) -> pd.DataFrame:
         """
         Reads CSV content from either a file path or a raw string.
         """
-        if is_path:
-            return pd.read_csv(source, sep=";", dtype=str, encoding="utf-8", keep_default_na=False)
-        else:
-            return pd.read_csv(StringIO(source), sep=";", dtype=str, encoding="utf-8", keep_default_na=False)
+        return pd.read_csv(source, sep=";", dtype=str, encoding="utf-8", keep_default_na=False)
 
     def prepare_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -82,10 +79,10 @@ class CsvDataLoader(DataLoaderPort):
 
 
 
-    def load_and_prepare(self, source: str, is_path: bool = True) -> pd.DataFrame:    
+    def load_and_prepare(self, source: str) -> pd.DataFrame:    
         """
         Combines reading and preparing steps.
         """
-        df = self.read_csv_content(source, is_path=is_path)
+        df = self.read_csv_content(source)
         return self.prepare_dataframe(df)
         

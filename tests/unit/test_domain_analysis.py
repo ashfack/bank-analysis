@@ -11,8 +11,10 @@ def test_compute_monthly_summary_basic():
         {"dateOp": "2023-02-01", "amount": -50.0, "month": "2023-02", "category": "C", "categoryParent": "B"},
     ])
     summary = compute_monthly_summary(df)
-    assert summary.loc[summary["month"] == "2023-01", "total_savings"].iloc[0] == 800.0
-    assert summary.loc[summary["month"] == "2023-02", "total_savings"].iloc[0] == -50.0
+    assert summary[0].month == "2023-01"
+    assert summary[0].total_savings == 800.0
+    assert summary[1].month == "2023-02"
+    assert summary[1].total_savings == -50
 
 def test_filter_atypical_months_and_aggregates():
     df = _build_df([
@@ -21,7 +23,8 @@ def test_filter_atypical_months_and_aggregates():
         {"dateOp": "2023-02-01", "amount": -50.0, "month": "2023-02", "category": "C", "categoryParent": "B"},
     ])
     summary = compute_monthly_summary(df)
-    filtered, excluded = filter_atypical_months(summary)
-    assert "2023-01" in excluded
-    aggregates = compute_aggregates(filtered)
+
+    filtered_atypical_months = filter_atypical_months(summary)
+    assert "2023-01" in filtered_atypical_months.excluded_months
+    aggregates = compute_aggregates(filtered_atypical_months.filtered)
     assert isinstance(aggregates.mean_savings, float)

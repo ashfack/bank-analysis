@@ -3,7 +3,8 @@ import pandas as pd
 import io
 import os
 from analysis import analyze_dataframe
-from src.bank_analysis.adapters.csv_loader import CsvDataLoader
+from src.bank_analysis.adapters.csv_content_loader import CsvContentDataLoader
+from src.bank_analysis.usecases.analyze_budget import AnalyzeBudgetUseCase
 
 app = Flask(__name__)
 app.secret_key = "change-me-in-production"
@@ -35,17 +36,19 @@ def analyze():
         return redirect(url_for("index"))
 
     try:
-        loader = CsvDataLoader(base_path=".")
-        df = loader.load_and_prepare(csv_text, False)
+        loader = CsvContentDataLoader(base_path=".")
+        uc = AnalyzeBudgetUseCase(loader)
+        customAnalysis = uc.run_full_analysis(csv_text)
     except Exception as e:
         flash(f"Could not parse CSV: {e}")
         return redirect(url_for("index"))
 
     # Call your refactored analysis function
+    df = loader.load_and_prepare(csv_text)
     results = analyze_dataframe(df)
 
     # results should be JSON-serializable dict with keys used in the template
-    return render_template("results.html", results=results)
+    return render_template("results.html", results=results, customAnalysis=customAnalysis)
 
 @app.route("/api/analyze", methods=["POST"])
 def api_analyze():

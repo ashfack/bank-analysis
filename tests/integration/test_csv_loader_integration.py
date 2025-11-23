@@ -1,5 +1,5 @@
 import os
-from bank_analysis.adapters.csv_loader import CsvDataLoader
+from bank_analysis.adapters.csv_file_loader import CsvFileDataLoader
 from bank_analysis.domain import analysis as domain_analysis
 
 HERE = os.path.dirname(__file__)
@@ -7,7 +7,7 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 DEMO = os.path.join(ROOT, "demo.csv")
 
 def test_csv_loader_reads_demo(tmp_path):
-    loader = CsvDataLoader(base_path=".")
+    loader = CsvFileDataLoader(base_path=".")
     path = DEMO if os.path.exists(DEMO) else None
     if path is None:
         tmpfile = tmp_path / "sample.csv"
@@ -17,4 +17,4 @@ def test_csv_loader_reads_demo(tmp_path):
     assert "month" in df.columns
     assert df["amount"].notna().any()
     summary = domain_analysis.compute_monthly_summary(df)
-    assert summary.shape[0] >= 1
+    assert len(summary) >=1
