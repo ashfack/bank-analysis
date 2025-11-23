@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Bank Analysis - Upload</title>
+  <title>Bank Analysis</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -10,7 +10,7 @@
     <h1>Bank Analysis</h1>
 
     <p>
-      From a bank transaction export, we want to generate insights from salary to salary:
+      From a bank transaction export, we want to generate insights from salary to salary or from first day of month to the last:
       <br/>
 
           - Total salaries received.<br/>
@@ -43,6 +43,33 @@
 
       <p>Or paste CSV content here:</p>
       <textarea name="csv_text" rows="10" cols="80" placeholder="columns: dateOp;category;categoryParent;amount; No matter the order but these should be the names and you can have more columns"></textarea>
+
+
+      
+      <!-- NEW: Radio buttons for cycle selection -->
+      <fieldset style="margin-top:1rem;">
+        <legend>Grouping Cycle</legend>
+        <label>
+          <input
+            type="radio"
+            name="cycle"
+            value="calendar"
+            {% if request.form.get('cycle', 'calendar') == 'calendar' %}checked{% endif %}
+          >
+          Monthly (calendar)
+        </label>
+        <br>
+        <label>
+          <input
+            type="radio"
+            name="cycle"
+            value="salary"
+            {% if request.form.get('cycle') == 'salary' %}checked{% endif %}
+          >
+          Salary-wise (salary to salary)
+        </label>
+      </fieldset>
+
 
       <p><button type="submit">Analyze</button></p>
     </form>

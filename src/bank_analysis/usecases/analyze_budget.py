@@ -21,8 +21,8 @@ class AnalyzeBudgetUseCase:
         return self.loader.load_and_prepare(csv_path)
 
     # STEP 2: Compute monthly summary
-    def compute_monthly_summary(self, df) -> List[MonthlySummaryRow]:
-        return domain_analysis.compute_monthly_summary(df, self.salary_category, self.exclude_parents, self.ref_salary)
+    def compute_monthly_summary(self, df, cycle: str = "calendar" ) -> List[MonthlySummaryRow]:
+        return domain_analysis.compute_monthly_summary(df, self.salary_category, self.exclude_parents, self.ref_salary, cycle)
 
     # STEP 3: Filter atypical months
     def filter_atypical_months(self, monthly_summary) -> FilteredSummaryResult:
@@ -45,12 +45,12 @@ class AnalyzeBudgetUseCase:
             category_breakdown.to_csv(export_paths["breakdown"], index=False, sep=";")
 
     # Orchestration method for full workflow
-    def run_full_analysis(self, csv_path: str,
+    def run_full_analysis(self, csv_path: str, cycle: str = "calendar" ,
                           do_filter_atypical: bool = False,
                           show_category_breakdown: bool = False,
                           export_paths: Optional[dict] = None) -> dict:
         df = self.load_data(csv_path)
-        monthly_summary = self.compute_monthly_summary(df)
+        monthly_summary = self.compute_monthly_summary(df, cycle)
 
         if do_filter_atypical:
             filtered_summary, excluded_months = self.filter_atypical_months(monthly_summary)
