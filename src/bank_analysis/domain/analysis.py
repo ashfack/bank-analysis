@@ -1,11 +1,39 @@
-from typing import List
+
+from typing import List, Tuple, Final
 import pandas as pd
 from .dto import MonthlySummaryRow, CategoryBreakdownRow, FilteredSummaryResult, AggregateMetrics
 
 # Default configuration values
 SALARY_CATEGORY = "Salaire fixe"
-EXCLUDE_EXPENSE_PARENTS = {"Mouvements internes débiteurs", "Mouvements internes créditeurs"}
+EXCLUDE_EXPENSE_PARENTS:Final = frozenset({"Mouvements internes débiteurs", "Mouvements internes créditeurs"})
 REF_THEORETICAL_SALARY = 3700.0
+
+# ===== Helpers for Salary Cycle =====
+
+def build_salary_periods(df: pd.DataFrame, salary_category: str) -> List[Tuple[pd.Timestamp, pd.Timestamp]]:
+    """
+    Build dynamic salary periods based on actual salary transaction dates.
+    Each period starts on a salary date and ends the day before the next salary date.
+    """
+    salary_dates = sorted(df.loc[df["category"] == salary_category, "dateOp"].unique())
+    if not salary_dates:
+        return []
+    periods = []
+    for i in range(len(salary_dates) - 1):
+        start = pd.Timestamp(salary_dates[i])
+        end = pd.Timestamp(salary_dates[i + 1]) - pd.Timedelta(days=1)
+        periods.append((start, end))
+    # Last period until max date in dataset
+    periods.append((pd.Timestamp(salary_dates[-1]), df["dateOp"].max()))
+    return periods
+
+
+def assign_salary_period(row_date: pd.Timestamp, periods: List[Tuple[pd.Timestamp, pd.Timestamp]]) -> str:
+    for start, end in periods:
+        if start <= row_date <= end:
+            return f"{start.date()} to {end.date()}"
+    return "Outside salary periods"
+
 
 # ===== Computation Functions (return DTOs) =====
 
@@ -13,18 +41,32 @@ def compute_monthly_summary(
     df: pd.DataFrame,
     salary_category: str = SALARY_CATEGORY,
     exclude_parents: set = EXCLUDE_EXPENSE_PARENTS,
-    ref_theoretical_salary: float = REF_THEORETICAL_SALARY
+    ref_theoretical_salary: float = REF_THEORETICAL_SALARY,
+    cycle: str = "calendar"  # NEW: "calendar" or "salary"
 ) -> List[MonthlySummaryRow]:
     """
-    Compute monthly summary: salaries, expenses, savings.
+    Compute summary: salaries, expenses, savings.
+    Supports calendar months or salary-to-salary cycles.
+
+    Args:
+        df: DataFrame with columns ["dateOp", "month", "category", "categoryParent", "amount"]
+        cycle: "calendar" (default) or "salary"
 
     Returns:
-        List[MonthlySummaryRow]: sorted by month ascending (YYYY-MM).
+        List[MonthlySummaryRow]: sorted by period ascending.
     """
-    # Salaries per month
+    # Determine grouping key
+    if cycle == "salary":
+        periods = build_salary_periods(df, salary_category)
+        df["salary_period"] = df["dateOp"].apply(lambda d: assign_salary_period(d, periods))
+        group_key = "salary_period"
+    else:
+        group_key = "month"
+
+    # Salaries per period
     salaries = (
         df.loc[df["category"] == salary_category]
-          .groupby("month")["amount"]
+          .groupby(group_key)["amount"]
           .sum()
           .rename("total_salary")
     )
@@ -35,14 +77,14 @@ def compute_monthly_summary(
     expenses_df = df.loc[mask_non_internal & mask_neg]
 
     expenses = (
-        expenses_df.groupby("month")["amount"]
+        expenses_df.groupby(group_key)["amount"]
                    .sum()
                    .abs()
                    .rename("total_expenses")
     )
 
     nb_ops = (
-        expenses_df.groupby("month")["amount"]
+        expenses_df.groupby(group_key)["amount"]
                    .count()
                    .rename("nb_expense_operations")
     )
@@ -52,12 +94,12 @@ def compute_monthly_summary(
     out["total_savings"] = out["total_salary"] - out["total_expenses"]
     out["total_savings_vs_theoretical"] = ref_theoretical_salary - out["total_expenses"]
 
-    out = out.round(2).reset_index().sort_values("month")
+    out = out.round(2).reset_index().sort_values(group_key)
 
     # Map to DTOs
     result: List[MonthlySummaryRow] = [
         MonthlySummaryRow(
-            month=str(row["month"]),
+            month=str(row[group_key]),
             total_salary=float(row["total_salary"]),
             total_expenses=float(row["total_expenses"]),
             nb_expense_operations=int(row["nb_expense_operations"]),
@@ -83,15 +125,14 @@ def compute_category_breakdown(
     mask_neg = df["amount"] < 0
     expenses_df = df.loc[mask_non_internal & mask_neg]
 
-    grouped = expenses_df.groupby(["month", "categoryParent"])
+    grouped = expenses_df.groupby(["categoryParent"])
     summary = grouped["amount"].agg(["sum", "count"]).reset_index()
     summary.rename(columns={"sum": "total", "count": "nb_operations"}, inplace=True)
     summary["total"] = summary["total"].abs().round(2)
-    summary = summary.sort_values(["month", "categoryParent"])
+    summary = summary.sort_values(["categoryParent"])
 
     return [
         CategoryBreakdownRow(
-            month=str(row["month"]),
             category_parent=str(row["categoryParent"]),
             total=float(row["total"]),
             nb_operations=int(row["nb_operations"]),

@@ -1,6 +1,6 @@
 from typing import Protocol, Sequence
 
-from src.bank_analysis.domain.dto import AggregateMetrics, CategoryBreakdownRow, FilteredSummaryResult, MonthlySummaryRow
+from ..domain.dto import AggregateMetrics, CategoryBreakdownRow, FilteredSummaryResult, MonthlySummaryRow
 
 class PresenterPort(Protocol):
     """Port describing presenter operations (output/adapters)."""

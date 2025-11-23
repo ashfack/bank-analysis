@@ -1,6 +1,17 @@
 import argparse
+
+from src.bank_analysis.usecases.compute_aggregates import \
+  ComputeAggregatesUseCase
+from src.bank_analysis.usecases.compute_category_breakdown import \
+  ComputeCategoryBreakdownUseCase
+from src.bank_analysis.usecases.compute_monthly_summary import \
+  ComputeMonthlySummaryUseCase
+from src.bank_analysis.usecases.data_loading import DataLoadingUseCase
+from src.bank_analysis.usecases.export_use_case import ExportUseCase
+from src.bank_analysis.usecases.filter_atypical_months import \
+  FilterAtypicalMonthsUseCase
 from ..adapters.csv_file_loader import CsvFileDataLoader
-from ..usecases.analyze_budget import AnalyzeBudgetUseCase
+from ..usecases.full_global_analysis import FullGlobalAnalysisUseCase
 from ..adapters.stdout_presenter import StdoutPresenter
 
 def choose_file_interactive(files):
@@ -23,7 +34,15 @@ def run(argv=None):
     args = parser.parse_args(argv)
 
     loader = CsvFileDataLoader(base_path=".")
-    uc = AnalyzeBudgetUseCase(loader)
+
+    data_loader_uc = DataLoadingUseCase(loader)
+    monthly_summary_uc = ComputeMonthlySummaryUseCase()
+    filter_uc = FilterAtypicalMonthsUseCase()
+    aggregates_uc = ComputeAggregatesUseCase()
+    category_breakdown_uc = ComputeCategoryBreakdownUseCase()
+    export_uc = ExportUseCase()
+
+    uc = FullGlobalAnalysisUseCase(loader)
 
     if args.csv:
         csv_path = args.csv
@@ -50,29 +69,29 @@ def run(argv=None):
 
     presenter = StdoutPresenter()
 
-    df = uc.load_data(csv_path)
-    summary=None
+    df = data_loader_uc.execute(csv_path)
 
-    monthly_summary = uc.compute_monthly_summary(df)
+    monthly_summary = monthly_summary_uc.execute(df)
     summary=monthly_summary
     presenter.present_monthly_summary(monthly_summary)
 
     if do_filter:
-        filtered_atypical_months = uc.filter_atypical_months(monthly_summary)
+        filtered_atypical_months = filter_uc.execute(monthly_summary)
         summary=filtered_atypical_months.filtered
         presenter.present_filtered_summary(filtered_atypical_months)
-        aggregates = uc.compute_aggregates(summary)
+        aggregates = aggregates_uc.execute(summary)
     else:
-        aggregates = uc.compute_aggregates(monthly_summary)
+        aggregates = aggregates_uc.execute(monthly_summary)
 
     presenter.present_aggregates(aggregates)
 
+    category_breakdown = None
     if show_breakdown:
-        category_breakdown = uc.compute_category_breakdown(df)
+        category_breakdown = category_breakdown_uc.execute(df)
     
     if export_choice == "y":
         export_paths = {"summary": "summary.csv", "breakdown": "category_breakdown.csv"}
-        uc.export(export_paths, summary, category_breakdown)
+        export_uc.execute(export_paths, summary, category_breakdown)
 
 
 if __name__ == "__main__":

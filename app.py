@@ -1,13 +1,21 @@
-from flask import Flask, request, render_template, redirect, url_for, flash, jsonify
+from flask import Flask, request, render_template, redirect, url_for, flash, jsonify, session
 import pandas as pd
 import io
 import os
-from analysis import analyze_dataframe
 from src.bank_analysis.adapters.csv_content_loader import CsvContentDataLoader
-from src.bank_analysis.usecases.analyze_budget import AnalyzeBudgetUseCase
+from src.bank_analysis.usecases.compute_category_breakdown import \
+  ComputeCategoryBreakdownUseCase
+from src.bank_analysis.usecases.compute_monthly_summary import \
+  ComputeMonthlySummaryUseCase
+from src.bank_analysis.usecases.data_loading import DataLoadingUseCase
+from src.bank_analysis.adapters.result_in_memory_store import InMemoryResultStore
+from src.bank_analysis.usecases.filter_atypical_months import \
+  FilterAtypicalMonthsUseCase
 
 app = Flask(__name__)
 app.secret_key = "change-me-in-production"
+result_store = InMemoryResultStore()
+
 
 ALLOWED_EXTENSIONS = {"csv", "txt"}
 
@@ -37,18 +45,65 @@ def analyze():
 
     try:
         loader = CsvContentDataLoader(base_path=".")
-        uc = AnalyzeBudgetUseCase(loader)
-        customAnalysis = uc.run_full_analysis(csv_text)
+
+        data_loader_uc = DataLoadingUseCase(loader)
+        monthly_summary_uc = ComputeMonthlySummaryUseCase()
+        filtering_outliers_uc = FilterAtypicalMonthsUseCase()
+
+        df = data_loader_uc.execute(csv_text)
+
+        # Read the cycle from form; default to calendar
+        cycle = request.form.get("cycle", "calendar")
+        custom_analysis = monthly_summary_uc.execute(df, cycle)
+        filtering_outlier = request.form.get("filtering_outlier", "yes")
+        if filtering_outlier == "yes":
+            custom_analysis = filtering_outliers_uc.execute(custom_analysis).filtered
     except Exception as e:
         flash(f"Could not parse CSV: {e}")
         return redirect(url_for("index"))
 
     # Call your refactored analysis function
     df = loader.load_and_prepare(csv_text)
-    results = analyze_dataframe(df)
+
+    # Store DF in session-aware cache
+    session_id = session.get("_id") or os.urandom(16).hex()
+    session["_id"] = session_id
+    result_store.put(session_id, df)
+
 
     # results should be JSON-serializable dict with keys used in the template
-    return render_template("results.html", results=results, customAnalysis=customAnalysis)
+    return render_template("results.html", results={}, customAnalysis=custom_analysis)
+
+
+@app.route("/details")
+
+def details():
+    period = request.args.get("period")
+    session_id = session.get("_id")
+    if not period or not session_id:
+        return jsonify([])
+
+    df = result_store.get(session_id)
+    if df is None:
+        return jsonify([])
+
+    if " to " in period:
+        start_str, end_str = period.split(" to ")
+        start_date = pd.to_datetime(start_str)
+        end_date = pd.to_datetime(end_str)
+        filtered_df = df[(df["dateOp"] >= start_date) & (df["dateOp"] <= end_date)]
+    else:
+        filtered_df = df[df["month"] == period]
+
+    category_breakdown_uc = ComputeCategoryBreakdownUseCase()
+    breakdown = category_breakdown_uc.execute(filtered_df)
+    return jsonify([{
+        "category_parent": row.category_parent,
+        "total": row.total,
+        "nb_operations": row.nb_operations
+    } for row in breakdown])
+
+
 
 @app.route("/api/analyze", methods=["POST"])
 def api_analyze():
@@ -66,7 +121,7 @@ def api_analyze():
     except Exception as e:
         return jsonify({"error": f"Could not parse CSV: {e}"}), 400
 
-    results = analyze_dataframe(df)
+    results = []
     return jsonify(results)
 
 if __name__ == "__main__":

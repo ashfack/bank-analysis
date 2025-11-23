@@ -1,9 +1,7 @@
 from typing import List
 import pandas as pd
-from bank_analysis.usecases.analyze_budget import AnalyzeBudgetUseCase
-from bank_analysis.ports.presenter import PresenterPort
+from bank_analysis.usecases.full_global_analysis import FullGlobalAnalysisUseCase
 from bank_analysis.ports.loader import DataLoaderPort
-from bank_analysis.domain import analysis as domain_analysis
 
 class FakeLoader(DataLoaderPort):
     def __init__(self, df):
@@ -19,7 +17,7 @@ def test_usecase_runs_and_presents():
         {"dateOp": "2023-01-07", "amount": -200.0, "month": "2023-01", "category": "C", "categoryParent": "B"},
     ])
     loader = FakeLoader(df)
-    uc = AnalyzeBudgetUseCase(loader)
+    uc = FullGlobalAnalysisUseCase(loader)
     out = uc.run_full_analysis("unused.csv", do_filter_atypical=False, show_category_breakdown=True)
     assert len(out["monthly_summary"]) >=1
     assert out["aggregates"] is not None
