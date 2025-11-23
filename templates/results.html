@@ -38,39 +38,6 @@
       </tbody>
     </table>
 
-
-
-
-    <p>Rows: {{ results.n_rows }} — Total amount: {{ results.total }}</p>
-
-    <h2>By category</h2>
-    <canvas id="categoryChart" width="600" height="300"></canvas>
-
-    <h2>Monthly totals</h2>
-    <canvas id="monthlyChart" width="600" height="300"></canvas>
-
-    <h2>Sample rows</h2>
-    <table>
-      <thead>
-        <tr>
-          {% if results.sample_rows and results.sample_rows[0] %}
-            {% for k in results.sample_rows[0].keys() %}
-              <th>{{ k }}</th>
-            {% endfor %}
-          {% endif %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in results.sample_rows %}
-          <tr>
-            {% for v in row.values() %}
-              <td>{{ v }}</td>
-            {% endfor %}
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-
     <p><a href="{{ url_for('index') }}">Back</a></p>
   </div>
 
