@@ -10,6 +10,6 @@ class DataLoaderPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def load_and_prepare(self, csv_path: str) -> pd.DataFrame:
+    def load_and_prepare(self, source: str) -> pd.DataFrame:
         """Return a prepared DataFrame matching domain expectations (dateOp, amount, month, category, categoryParent)."""
         raise NotImplementedError

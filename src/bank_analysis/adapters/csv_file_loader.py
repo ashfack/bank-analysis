@@ -1,3 +1,4 @@
+from io import StringIO
 import os
 import unicodedata
 import pandas as pd
@@ -32,7 +33,7 @@ def parse_amount(value):
         except Exception:
             return pd.NA
 
-class CsvDataLoader(DataLoaderPort):
+class CsvFileDataLoader(DataLoaderPort):
     """CSV adapter tuned to demo.csv (semicolon sep, comma decimals)."""
 
     def __init__(self, base_path: str = "."):
@@ -41,25 +42,47 @@ class CsvDataLoader(DataLoaderPort):
     def list_csv_files(self) -> List[str]:
         files = [f for f in os.listdir(self.base_path) if f.lower().endswith('.csv')]
         return files
+    
 
-    def load_and_prepare(self, csv_path: str) -> pd.DataFrame:
-        # demo.csv uses semicolon separator and uses comma as decimal separator for amounts.
-        df = pd.read_csv(csv_path, sep=";", dtype=str, encoding="utf-8", keep_default_na=False)
-        # dateOp -> datetime (if present)
+    def read_csv_content(self, source: str) -> pd.DataFrame:
+        """
+        Reads CSV content from either a file path or a raw string.
+        """
+        return pd.read_csv(source, sep=";", dtype=str, encoding="utf-8", keep_default_na=False)
+
+    def prepare_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Parses and enriches the DataFrame with date, amount, month, and category columns.
+        """
+        # dateOp -> datetime
         if "dateOp" in df.columns:
             df["dateOp"] = pd.to_datetime(df["dateOp"], errors="coerce", format="%Y-%m-%d")
         else:
             df["dateOp"] = pd.NaT
+
         # parse amounts robustly
         if "amount" in df.columns:
             df["amount"] = df["amount"].apply(parse_amount).astype("Float64")
         else:
             df["amount"] = pd.NA
+
         # month from dateOp
         df["month"] = df["dateOp"].dt.to_period("M").astype(str)
+
         # ensure category columns exist
         if "category" not in df.columns:
             df["category"] = ""
         if "categoryParent" not in df.columns:
             df["categoryParent"] = ""
+
         return df
+
+
+
+    def load_and_prepare(self, source: str) -> pd.DataFrame:    
+        """
+        Combines reading and preparing steps.
+        """
+        df = self.read_csv_content(source)
+        return self.prepare_dataframe(df)
+        

@@ -1,5 +1,5 @@
 import argparse
-from ..adapters.csv_loader import CsvDataLoader
+from ..adapters.csv_file_loader import CsvFileDataLoader
 from ..usecases.analyze_budget import AnalyzeBudgetUseCase
 from ..adapters.stdout_presenter import StdoutPresenter
 
@@ -22,9 +22,8 @@ def run(argv=None):
     parser.add_argument("--csv", "-c", help="Path to accounts CSV")
     args = parser.parse_args(argv)
 
-    loader = CsvDataLoader(base_path=".")
-    presenter = StdoutPresenter()
-    uc = AnalyzeBudgetUseCase(loader, presenter)
+    loader = CsvFileDataLoader(base_path=".")
+    uc = AnalyzeBudgetUseCase(loader)
 
     if args.csv:
         csv_path = args.csv
@@ -48,7 +47,33 @@ def run(argv=None):
     if export_choice == "y":
         export_paths = {"summary": "filtered_summary.csv", "breakdown": "category_breakdown.csv"}
 
-    uc.run_from_path(csv_path, do_filter_atypical=do_filter, show_category_breakdown=show_breakdown, export_paths=export_paths)
+
+    presenter = StdoutPresenter()
+
+    df = uc.load_data(csv_path)
+    summary=None
+
+    monthly_summary = uc.compute_monthly_summary(df)
+    summary=monthly_summary
+    presenter.present_monthly_summary(monthly_summary)
+
+    if do_filter:
+        filtered_atypical_months = uc.filter_atypical_months(monthly_summary)
+        summary=filtered_atypical_months.filtered
+        presenter.present_filtered_summary(filtered_atypical_months)
+        aggregates = uc.compute_aggregates(summary)
+    else:
+        aggregates = uc.compute_aggregates(monthly_summary)
+
+    presenter.present_aggregates(aggregates)
+
+    if show_breakdown:
+        category_breakdown = uc.compute_category_breakdown(df)
+    
+    if export_choice == "y":
+        export_paths = {"summary": "summary.csv", "breakdown": "category_breakdown.csv"}
+        uc.export(export_paths, summary, category_breakdown)
+
 
 if __name__ == "__main__":
     run()

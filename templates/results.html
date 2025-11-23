@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Bank Analysis - Results</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>Analysis Results</h1>
+
+
+
+    <h2>Monthly Summary</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>Total Salary</th>
+          <th>Total Expenses</th>
+          <th># Expense Ops</th>
+          <th>Total Savings</th>
+          <th>Savings vs Theoretical</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in customAnalysis.monthly_summary %}
+          <tr>
+            <td>{{ row.month }}</td>
+            <td>{{ "%.2f"|format(row.total_salary) }}</td>
+            <td>{{ "%.2f"|format(row.total_expenses) }}</td>
+            <td>{{ row.nb_expense_operations }}</td>
+            <td>{{ "%.2f"|format(row.total_savings) }}</td>
+            <td>{{ "%.2f"|format(row.total_savings_vs_theoretical) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <p><a href="{{ url_for('index') }}">Back</a></p>
+  </div>
+
+  <script>
+    const catLabels = {{ results.categories | map(attribute='category') | list | tojson }};
+    const catData = {{ results.categories | map(attribute='total') | list | tojson }};
+
+    new Chart(document.getElementById('categoryChart'), {
+      type: 'bar',
+      data: {
+        labels: catLabels,
+        datasets: [{ label: 'Amount', data: catData, backgroundColor: 'rgba(54, 162, 235, 0.6)' }]
+      },
+      options: { responsive: true }
+    });
+
+    const months = {{ results.monthly | map(attribute='month') | list | tojson }};
+    const monthData = {{ results.monthly | map(attribute='total') | list | tojson }};
+
+    new Chart(document.getElementById('monthlyChart'), {
+      type: 'line',
+      data: {
+        labels: months,
+        datasets: [{ label: 'Monthly total', data: monthData, fill: false, borderColor: 'rgba(255,99,132,1)' }]
+      },
+      options: { responsive: true }
+    });
+  </script>
+</body>
+</html>
