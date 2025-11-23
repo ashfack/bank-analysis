@@ -33,12 +33,12 @@
     {% endwith %}
 
     <form action="{{ url_for('analyze') }}" method="post" enctype="multipart/form-data">
-      <label>Upload CSV file (columns: <br/>
+      <label>Upload CSV file with the following columns (not matter the order but these should be the names): <br/>
         - dateOp<br/>
         - category<br/>
         - categoryParent<br/>
         - amount<br/>
-        No matter the order but these should be the names):</label>
+      </label>
       <input type="file" name="file" accept=".csv,.txt">
 
       <p>Or paste CSV content here:</p>
@@ -46,7 +46,7 @@
 
 
       
-      <!-- NEW: Radio buttons for cycle selection -->
+
       <fieldset style="margin-top:1rem;">
         <legend>Grouping Cycle</legend>
         <label>
@@ -67,6 +67,29 @@
             {% if request.form.get('cycle') == 'salary' %}checked{% endif %}
           >
           Salary-wise (salary to salary)
+        </label>
+      </fieldset>
+
+      <fieldset style="margin-top:1rem;">
+        <legend>Filtering outliers</legend>
+        <label>
+          <input
+            type="radio"
+            name="filtering_outlier"
+            value="yes"
+            {% if request.form.get('filtering_outlier', 'yes') == 'yes' %}checked{% endif %}
+          >
+          Yes
+        </label>
+        <br>
+        <label>
+          <input
+            type="radio"
+            name="filtering_outlier"
+            value="no"
+            {% if request.form.get('filtering_outlier') == 'no' %}checked{% endif %}
+          >
+          No
         </label>
       </fieldset>
 

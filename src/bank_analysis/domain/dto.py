@@ -16,7 +16,6 @@ class MonthlySummaryRow:
 
 @dataclass(frozen=True)
 class CategoryBreakdownRow:
-    month: str
     category_parent: str
     total: float
     nb_operations: int

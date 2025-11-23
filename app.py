@@ -3,9 +3,14 @@ import pandas as pd
 import io
 import os
 from src.bank_analysis.adapters.csv_content_loader import CsvContentDataLoader
-from src.bank_analysis.usecases.analyze_budget import AnalyzeBudgetUseCase
+from src.bank_analysis.usecases.compute_category_breakdown import \
+  ComputeCategoryBreakdownUseCase
+from src.bank_analysis.usecases.compute_monthly_summary import \
+  ComputeMonthlySummaryUseCase
+from src.bank_analysis.usecases.data_loading import DataLoadingUseCase
 from src.bank_analysis.adapters.result_in_memory_store import InMemoryResultStore
-
+from src.bank_analysis.usecases.filter_atypical_months import \
+  FilterAtypicalMonthsUseCase
 
 app = Flask(__name__)
 app.secret_key = "change-me-in-production"
@@ -40,13 +45,19 @@ def analyze():
 
     try:
         loader = CsvContentDataLoader(base_path=".")
-        uc = AnalyzeBudgetUseCase(loader)
 
+        data_loader_uc = DataLoadingUseCase(loader)
+        monthly_summary_uc = ComputeMonthlySummaryUseCase()
+        filtering_outliers_uc = FilterAtypicalMonthsUseCase()
+
+        df = data_loader_uc.execute(csv_text)
 
         # Read the cycle from form; default to calendar
-        cycle = request.form.get("cycle", "calendar")  # "calendar" or "salary"
-
-        customAnalysis = uc.run_full_analysis(csv_text, cycle)
+        cycle = request.form.get("cycle", "calendar")
+        custom_analysis = monthly_summary_uc.execute(df, cycle)
+        filtering_outlier = request.form.get("filtering_outlier", "yes")
+        if filtering_outlier == "yes":
+            custom_analysis = filtering_outliers_uc.execute(custom_analysis).filtered
     except Exception as e:
         flash(f"Could not parse CSV: {e}")
         return redirect(url_for("index"))
@@ -61,7 +72,7 @@ def analyze():
 
 
     # results should be JSON-serializable dict with keys used in the template
-    return render_template("results.html", results={}, customAnalysis=customAnalysis)
+    return render_template("results.html", results={}, customAnalysis=custom_analysis)
 
 
 @app.route("/details")
@@ -73,7 +84,6 @@ def details():
         return jsonify([])
 
     df = result_store.get(session_id)
-    print(df)
     if df is None:
         return jsonify([])
 
@@ -84,9 +94,9 @@ def details():
         filtered_df = df[(df["dateOp"] >= start_date) & (df["dateOp"] <= end_date)]
     else:
         filtered_df = df[df["month"] == period]
-    loader = CsvContentDataLoader(base_path=".")
-    uc = AnalyzeBudgetUseCase(loader)
-    breakdown = uc.compute_category_breakdown(filtered_df)
+
+    category_breakdown_uc = ComputeCategoryBreakdownUseCase()
+    breakdown = category_breakdown_uc.execute(filtered_df)
     return jsonify([{
         "category_parent": row.category_parent,
         "total": row.total,

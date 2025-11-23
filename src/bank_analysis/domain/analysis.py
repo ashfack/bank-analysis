@@ -1,11 +1,11 @@
 
-from typing import List, Tuple
+from typing import List, Tuple, Final
 import pandas as pd
 from .dto import MonthlySummaryRow, CategoryBreakdownRow, FilteredSummaryResult, AggregateMetrics
 
 # Default configuration values
 SALARY_CATEGORY = "Salaire fixe"
-EXCLUDE_EXPENSE_PARENTS = {"Mouvements internes débiteurs", "Mouvements internes créditeurs"}
+EXCLUDE_EXPENSE_PARENTS:Final = frozenset({"Mouvements internes débiteurs", "Mouvements internes créditeurs"})
 REF_THEORETICAL_SALARY = 3700.0
 
 # ===== Helpers for Salary Cycle =====
@@ -125,15 +125,14 @@ def compute_category_breakdown(
     mask_neg = df["amount"] < 0
     expenses_df = df.loc[mask_non_internal & mask_neg]
 
-    grouped = expenses_df.groupby(["month", "categoryParent"])
+    grouped = expenses_df.groupby(["categoryParent"])
     summary = grouped["amount"].agg(["sum", "count"]).reset_index()
     summary.rename(columns={"sum": "total", "count": "nb_operations"}, inplace=True)
     summary["total"] = summary["total"].abs().round(2)
-    summary = summary.sort_values(["month", "categoryParent"])
+    summary = summary.sort_values(["categoryParent"])
 
     return [
         CategoryBreakdownRow(
-            month=str(row["month"]),
             category_parent=str(row["categoryParent"]),
             total=float(row["total"]),
             nb_operations=int(row["nb_operations"]),

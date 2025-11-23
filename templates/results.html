@@ -26,7 +26,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for row in customAnalysis.monthly_summary %}
+        {% for row in customAnalysis %}
           <tr class="summary-row" data-period="{{ row.month }}">
             <td>{{ row.month }}</td>
             <td>{{ "%.2f"|format(row.total_salary) }}</td>
