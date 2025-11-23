@@ -1,7 +1,9 @@
-
-from typing import List, Tuple, Final
+from collections import defaultdict
+from typing import List, Tuple, Final, Sequence
 import pandas as pd
 from .dto import MonthlySummaryRow, CategoryBreakdownRow, FilteredSummaryResult, AggregateMetrics
+from .entities import Transaction
+from ..ports.cycle_grouper import CycleGrouper
 
 # Default configuration values
 SALARY_CATEGORY = "Salaire fixe"
@@ -109,6 +111,49 @@ def compute_monthly_summary(
         for _, row in out.iterrows()
     ]
     return result
+
+def compute_monthly_summary_core(
+    txns: Sequence[Transaction],
+    cycle_grouper: CycleGrouper,
+    ref_theoretical_salary: float = REF_THEORETICAL_SALARY,
+    salary_category: str = SALARY_CATEGORY,
+    exclude_parents: frozenset[str] = EXCLUDE_EXPENSE_PARENTS,
+) -> list[MonthlySummaryRow]:
+    """
+    Pure domain computation. Groups using the provided CycleGrouper.
+    Step 1: calendar only (we'll add the salary cycle in Step 2).
+    """
+    salaries: dict[str, float] = defaultdict(float)
+    expenses: dict[str, float] = defaultdict(float)
+    ops_count: dict[str, int] = defaultdict(int)
+
+    for t in txns:
+        label = cycle_grouper.label_for_date(t.date_op)
+        if t.category == salary_category:
+            salaries[label] += float(t.amount)
+        if t.amount < 0 and t.category_parent not in exclude_parents:
+            expenses[label] += float(t.amount)  # negative sum
+            ops_count[label] += 1
+
+    groups = sorted(set(salaries) | set(expenses))
+    out: list[MonthlySummaryRow] = []
+    for g in groups:
+        total_salary = round(salaries.get(g, 0.0), 2)
+        total_expenses = round(abs(expenses.get(g, 0.0)), 2)  # abs of negative sum
+        nb_ops = ops_count.get(g, 0)
+
+        total_savings = round(total_salary - total_expenses, 2)
+        total_vs_theoretical = round(ref_theoretical_salary - total_expenses, 2)
+
+        out.append(MonthlySummaryRow(
+            month=g,
+            total_salary=total_salary,
+            total_expenses=total_expenses,
+            nb_expense_operations=nb_ops,
+            total_savings=total_savings,
+            total_savings_vs_theoretical=total_vs_theoretical,
+        ))
+    return out
 
 
 def compute_category_breakdown(

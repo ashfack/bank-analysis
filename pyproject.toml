@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+
+[project]
+name = "bank-analysis"
+version = "0.1.0"
+description = "Hexagonal bank analysis without pandas"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "ABDOUL AZID Ashfack" }]
+dependencies = []
