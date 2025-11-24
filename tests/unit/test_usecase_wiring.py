@@ -1,5 +1,8 @@
+from itertools import cycle
 from typing import List
 import pandas as pd
+
+from bank_analysis.adapters.calendar_cycle import CalendarCycleGrouper
 from bank_analysis.usecases.full_global_analysis import FullGlobalAnalysisUseCase
 from bank_analysis.ports.loader import DataLoaderPort
 
@@ -17,7 +20,8 @@ def test_usecase_runs_and_presents():
         {"dateOp": "2023-01-07", "amount": -200.0, "month": "2023-01", "category": "C", "categoryParent": "B"},
     ])
     loader = FakeLoader(df)
-    uc = FullGlobalAnalysisUseCase(loader)
+    cycle_grouper = CalendarCycleGrouper()
+    uc = FullGlobalAnalysisUseCase(loader, cycle_grouper)
     out = uc.run_full_analysis("unused.csv", do_filter_atypical=False, show_category_breakdown=True)
     assert len(out["monthly_summary"]) >=1
     assert out["aggregates"] is not None

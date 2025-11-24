@@ -7,16 +7,19 @@ from .compute_category_breakdown import ComputeCategoryBreakdownUseCase
 from .compute_monthly_summary import ComputeMonthlySummaryUseCase
 from .data_loading import DataLoadingUseCase
 from .filter_atypical_months import FilterAtypicalMonthsUseCase
+from ..ports.cycle_grouper import CycleGrouper
 from ..ports.loader import DataLoaderPort
 from ..domain import analysis as domain_analysis
 from ..domain.dto import AggregateMetrics, CategoryBreakdownRow, FilteredSummaryResult, MonthlySummaryRow
 
 class FullGlobalAnalysisUseCase:
     def __init__(self, loader: DataLoaderPort,
+                 cycle_grouper: CycleGrouper,
                  salary_category: str = domain_analysis.SALARY_CATEGORY,
                  exclude_parents: set = domain_analysis.EXCLUDE_EXPENSE_PARENTS,
                  ref_salary: float = domain_analysis.REF_THEORETICAL_SALARY):
         self.loader = loader
+        self.cycle_grouper = cycle_grouper
         self.salary_category = salary_category
         self.exclude_parents = exclude_parents
         self.ref_salary = ref_salary
@@ -28,7 +31,7 @@ class FullGlobalAnalysisUseCase:
                           export_paths: Optional[dict] = None) -> dict:
 
         data_loader_uc = DataLoadingUseCase(self.loader)
-        monthly_summary_uc = ComputeMonthlySummaryUseCase()
+        monthly_summary_uc = ComputeMonthlySummaryUseCase(self.cycle_grouper)
         filter_uc = FilterAtypicalMonthsUseCase()
         aggregates_uc = ComputeAggregatesUseCase()
         category_breakdown_uc = ComputeCategoryBreakdownUseCase()

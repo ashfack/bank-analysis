@@ -2,6 +2,9 @@ from flask import Flask, request, render_template, redirect, url_for, flash, jso
 import pandas as pd
 import io
 import os
+
+from bank_analysis.adapters.calendar_cycle import CalendarCycleGrouper
+from bank_analysis.adapters.salary_cycle import SalaryCycleGrouper
 from src.bank_analysis.adapters.csv_content_loader import CsvContentDataLoader
 from src.bank_analysis.usecases.compute_category_breakdown import \
   ComputeCategoryBreakdownUseCase
@@ -44,16 +47,26 @@ def analyze():
         return redirect(url_for("index"))
 
     try:
-        loader = CsvContentDataLoader(base_path=".")
 
-        data_loader_uc = DataLoadingUseCase(loader)
-        monthly_summary_uc = ComputeMonthlySummaryUseCase()
-        filtering_outliers_uc = FilterAtypicalMonthsUseCase()
-
-        df = data_loader_uc.execute(csv_text)
 
         # Read the cycle from form; default to calendar
         cycle = request.form.get("cycle", "calendar")
+        cycle_grouper = None
+
+        loader = CsvContentDataLoader(base_path=".")
+        data_loader_uc = DataLoadingUseCase(loader)
+
+        df = data_loader_uc.execute(csv_text)
+
+        if cycle == "calendar": cycle_grouper = CalendarCycleGrouper()
+        elif cycle == "salary": cycle_grouper = SalaryCycleGrouper(df)
+
+
+        monthly_summary_uc = ComputeMonthlySummaryUseCase(cycle_grouper)
+        filtering_outliers_uc = FilterAtypicalMonthsUseCase()
+
+
+
         custom_analysis = monthly_summary_uc.execute(df, cycle)
         filtering_outlier = request.form.get("filtering_outlier", "yes")
         if filtering_outlier == "yes":

@@ -5,19 +5,21 @@ from ..adapters.calendar_cycle import CalendarCycleGrouper
 from ..domain import analysis as domain_analysis
 from ..domain.dto import MonthlySummaryRow
 from ..domain.entities import Transaction
+from ..ports.cycle_grouper import CycleGrouper
 
 
 class ComputeMonthlySummaryUseCase:
     def __init__(self,
+                 cycle_grouper: CycleGrouper,
                  salary_category: str = domain_analysis.SALARY_CATEGORY,
                  exclude_parents: set = domain_analysis.EXCLUDE_EXPENSE_PARENTS,
                  ref_salary: float = domain_analysis.REF_THEORETICAL_SALARY,
-                 cycle: str = "calendar"
+
     ):
         self.salary_category = salary_category
         self.exclude_parents = exclude_parents
         self.ref_salary = ref_salary
-        self.cycle = cycle
+        self.cycle_grouper = cycle_grouper
 
     def execute(self, df: pd.DataFrame, cycle: str = "calendar") -> List[MonthlySummaryRow]:
         if df is None or df.empty:
@@ -35,16 +37,8 @@ class ComputeMonthlySummaryUseCase:
     def execute_bis(self,
         txns: Sequence[Transaction]
     ) -> list[MonthlySummaryRow]:
-      """
-      Application use case that wires the domain service with the cycle strategy.
-      Step 1: supports only 'calendar'. Step 2 will add 'salary'.
-      """
-      if self.cycle != "calendar":
-        raise NotImplementedError(
-          "Only 'calendar' cycle is supported in Step 1.")
-      cycle_grouper = CalendarCycleGrouper()
       return domain_analysis.compute_monthly_summary_core(txns,
-                                                          cycle_grouper=cycle_grouper,
+                                                          cycle_grouper=self.cycle_grouper,
                                                           salary_category=self.salary_category,
                                                           exclude_parents=frozenset(self.exclude_parents),
                                                           ref_theoretical_salary=self.ref_salary,

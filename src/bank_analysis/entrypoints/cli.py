@@ -1,5 +1,6 @@
 import argparse
 
+from bank_analysis.adapters.salary_cycle import SalaryCycleGrouper
 from src.bank_analysis.usecases.compute_aggregates import \
   ComputeAggregatesUseCase
 from src.bank_analysis.usecases.compute_category_breakdown import \
@@ -36,13 +37,11 @@ def run(argv=None):
     loader = CsvFileDataLoader(base_path=".")
 
     data_loader_uc = DataLoadingUseCase(loader)
-    monthly_summary_uc = ComputeMonthlySummaryUseCase()
+
     filter_uc = FilterAtypicalMonthsUseCase()
     aggregates_uc = ComputeAggregatesUseCase()
     category_breakdown_uc = ComputeCategoryBreakdownUseCase()
     export_uc = ExportUseCase()
-
-    uc = FullGlobalAnalysisUseCase(loader)
 
     if args.csv:
         csv_path = args.csv
@@ -62,14 +61,13 @@ def run(argv=None):
     show_breakdown = choice == "y"
 
     export_choice = input("\nDo you want to export the filtered summary and category breakdown to CSV? (y/n): ").strip().lower()
-    export_paths = None
-    if export_choice == "y":
-        export_paths = {"summary": "filtered_summary.csv", "breakdown": "category_breakdown.csv"}
-
 
     presenter = StdoutPresenter()
 
     df = data_loader_uc.execute(csv_path)
+
+    cycle_grouper = SalaryCycleGrouper(df)
+    monthly_summary_uc = ComputeMonthlySummaryUseCase(cycle_grouper)
 
     monthly_summary = monthly_summary_uc.execute(df)
     summary=monthly_summary
