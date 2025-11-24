@@ -5,6 +5,7 @@ import os
 
 from bank_analysis.adapters.calendar_cycle import CalendarCycleGrouper
 from bank_analysis.adapters.salary_cycle import SalaryCycleGrouper
+from bank_analysis.infrastructure import period_splicer
 from src.bank_analysis.adapters.csv_content_loader import CsvContentDataLoader
 from src.bank_analysis.usecases.compute_category_breakdown import \
   ComputeCategoryBreakdownUseCase
@@ -96,20 +97,15 @@ def details():
     if not period or not session_id:
         return jsonify([])
 
-    df = result_store.get(session_id)
-    if df is None:
+    transactions = result_store.get(session_id)
+    if transactions is None:
         return jsonify([])
 
-    if " to " in period:
-        start_str, end_str = period.split(" to ")
-        start_date = pd.to_datetime(start_str)
-        end_date = pd.to_datetime(end_str)
-        filtered_df = df[(df["dateOp"] >= start_date) & (df["dateOp"] <= end_date)]
-    else:
-        filtered_df = df[df["month"] == period]
+    spliced_transactions = period_splicer.filter_transactions_by_period(transactions, period)
 
     category_breakdown_uc = ComputeCategoryBreakdownUseCase()
-    breakdown = category_breakdown_uc.execute(filtered_df)
+    print(spliced_transactions, flush=True)
+    breakdown = category_breakdown_uc.execute(spliced_transactions)
     return jsonify([{
         "category_parent": row.category_parent,
         "total": row.total,
