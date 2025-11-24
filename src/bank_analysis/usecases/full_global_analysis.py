@@ -25,7 +25,7 @@ class FullGlobalAnalysisUseCase:
         self.ref_salary = ref_salary
 
     # Orchestration method for full workflow
-    def run_full_analysis(self, csv_path: str, cycle: str = "calendar" ,
+    def run_full_analysis(self, csv_path: str,
                           do_filter_atypical: bool = False,
                           show_category_breakdown: bool = False,
                           export_paths: Optional[dict] = None) -> dict:
@@ -36,8 +36,8 @@ class FullGlobalAnalysisUseCase:
         aggregates_uc = ComputeAggregatesUseCase()
         category_breakdown_uc = ComputeCategoryBreakdownUseCase()
 
-        df = data_loader_uc.execute(csv_path)
-        monthly_summary = monthly_summary_uc.execute(df, cycle)
+        transactions = data_loader_uc.execute(csv_path)
+        monthly_summary = monthly_summary_uc.execute(transactions)
 
         if do_filter_atypical:
             filtered_summary_result  = filter_uc.execute(monthly_summary)
@@ -50,7 +50,7 @@ class FullGlobalAnalysisUseCase:
         aggregates = aggregates_uc.execute(filtered_summary)
         category_breakdown = None
         if show_category_breakdown:
-            category_breakdown = category_breakdown_uc.execute(df)
+            category_breakdown = category_breakdown_uc.execute(transactions)
 
         return {
             "monthly_summary": monthly_summary,

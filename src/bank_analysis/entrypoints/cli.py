@@ -64,12 +64,12 @@ def run(argv=None):
 
     presenter = StdoutPresenter()
 
-    df = data_loader_uc.execute(csv_path)
+    transactions = data_loader_uc.execute(csv_path)
 
-    cycle_grouper = SalaryCycleGrouper(df)
+    cycle_grouper = SalaryCycleGrouper(transactions)
     monthly_summary_uc = ComputeMonthlySummaryUseCase(cycle_grouper)
 
-    monthly_summary = monthly_summary_uc.execute(df)
+    monthly_summary = monthly_summary_uc.execute(transactions)
     summary=monthly_summary
     presenter.present_monthly_summary(monthly_summary)
 
@@ -85,7 +85,7 @@ def run(argv=None):
 
     category_breakdown = None
     if show_breakdown:
-        category_breakdown = category_breakdown_uc.execute(df)
+        category_breakdown = category_breakdown_uc.execute(transactions)
     
     if export_choice == "y":
         export_paths = {"summary": "summary.csv", "breakdown": "category_breakdown.csv"}

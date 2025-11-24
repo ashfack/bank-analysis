@@ -56,10 +56,10 @@ def analyze():
         loader = CsvContentDataLoader(base_path=".")
         data_loader_uc = DataLoadingUseCase(loader)
 
-        df = data_loader_uc.execute(csv_text)
+        transactions = data_loader_uc.execute(csv_text)
 
         if cycle == "calendar": cycle_grouper = CalendarCycleGrouper()
-        elif cycle == "salary": cycle_grouper = SalaryCycleGrouper(df)
+        elif cycle == "salary": cycle_grouper = SalaryCycleGrouper(transactions)
 
 
         monthly_summary_uc = ComputeMonthlySummaryUseCase(cycle_grouper)
@@ -67,7 +67,7 @@ def analyze():
 
 
 
-        custom_analysis = monthly_summary_uc.execute(df, cycle)
+        custom_analysis = monthly_summary_uc.execute(transactions)
         filtering_outlier = request.form.get("filtering_outlier", "yes")
         if filtering_outlier == "yes":
             custom_analysis = filtering_outliers_uc.execute(custom_analysis).filtered
@@ -76,12 +76,12 @@ def analyze():
         return redirect(url_for("index"))
 
     # Call your refactored analysis function
-    df = loader.load_and_prepare(csv_text)
+    transactions = loader.load_and_prepare(csv_text)
 
     # Store DF in session-aware cache
     session_id = session.get("_id") or os.urandom(16).hex()
     session["_id"] = session_id
-    result_store.put(session_id, df)
+    result_store.put(session_id, transactions)
 
 
     # results should be JSON-serializable dict with keys used in the template

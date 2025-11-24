@@ -21,7 +21,7 @@ def _sample_txns():
 def test_usecase_with_calendar_cycle():
     txns = _sample_txns()
     uc = ComputeMonthlySummaryUseCase(cycle_grouper=CalendarCycleGrouper())
-    out = uc.execute_bis(txns)
+    out = uc.execute(txns)
 
     # Calendar grouping: "2025-01", "2025-02"
     assert [r.month for r in out] == ["2025-01", "2025-02"]
@@ -35,7 +35,7 @@ def test_usecase_with_calendar_cycle():
 def test_usecase_with_salary_cycle():
     txns = _sample_txns()
     uc = ComputeMonthlySummaryUseCase(cycle_grouper=SalaryCycleGrouper(txns))
-    out = uc.execute_bis(txns)
+    out = uc.execute(txns)
 
     labels = [r.month for r in out]
     assert labels[0].startswith("2025-01-25 to 2025-02-24")
