@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List, Tuple, Final, Sequence
+from typing import List, Tuple, Final, Sequence, Set
 import pandas as pd
 from .dto import MonthlySummaryRow, CategoryBreakdownRow, FilteredSummaryResult, AggregateMetrics
 from .entities import Transaction
@@ -156,34 +156,50 @@ def compute_monthly_summary_core(
     return out
 
 
+
 def compute_category_breakdown(
-    df: pd.DataFrame,
-    exclude_parents: set = EXCLUDE_EXPENSE_PARENTS
+    transactions: Sequence[Transaction],
+    exclude_parents: Set[str] = EXCLUDE_EXPENSE_PARENTS
 ) -> List[CategoryBreakdownRow]:
     """
     Advanced mode: breakdown by category parent (total + number of operations).
+    Mirrors the original pandas implementation:
+      - filters out parents in exclude_parents
+      - considers only expenses (amount < 0)
+      - sums absolute values of expenses per category_parent
+      - counts operations per category_parent
+      - sorts by category_parent
 
     Returns:
-        List[CategoryBreakdownRow]: sorted by (month, category_parent).
+        List[CategoryBreakdownRow]: sorted by category_parent.
     """
-    mask_non_internal = ~df["categoryParent"].isin(exclude_parents)
-    mask_neg = df["amount"] < 0
-    expenses_df = df.loc[mask_non_internal & mask_neg]
+    totals = defaultdict(float)
+    counts = defaultdict(int)
 
-    grouped = expenses_df.groupby(["categoryParent"])
-    summary = grouped["amount"].agg(["sum", "count"]).reset_index()
-    summary.rename(columns={"sum": "total", "count": "nb_operations"}, inplace=True)
-    summary["total"] = summary["total"].abs().round(2)
-    summary = summary.sort_values(["categoryParent"])
+    for tx in transactions:
+        # Skip if category_parent is missing
+        cp = tx.category_parent
+        if cp is None:
+            continue
 
-    return [
+        # Filter non-internal (not in excluded list) and negative amounts (expenses)
+        if cp not in exclude_parents and tx.amount < 0:
+            # Accumulate absolute value (equivalent to pandas .abs() on the sum)
+            totals[cp] += -tx.amount
+            counts[cp] += 1
+
+    # Build rows sorted by category_parent, and round totals to 2 decimals
+    rows = [
         CategoryBreakdownRow(
-            category_parent=str(row["categoryParent"]),
-            total=float(row["total"]),
-            nb_operations=int(row["nb_operations"]),
+            category_parent=cp,
+            total=round(totals[cp], 2),
+            nb_operations=counts[cp],
         )
-        for _, row in summary.iterrows()
+        for cp in sorted(totals.keys())
     ]
+
+    return rows
+
 
 
 def filter_atypical_months(
