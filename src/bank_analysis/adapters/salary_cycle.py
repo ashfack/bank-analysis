@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 from typing import Sequence
-from bank_analysis.domain.entities import Transaction
-from bank_analysis.ports.cycle_grouper import CycleGrouper
+from src.bank_analysis.domain.entities import Transaction
+from src.bank_analysis.ports.cycle_grouper import CycleGrouper
 
 class SalaryCycleGrouper(CycleGrouper):
     """
