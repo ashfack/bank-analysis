@@ -86,6 +86,7 @@ def run(argv=None):
     category_breakdown = None
     if show_breakdown:
         category_breakdown = category_breakdown_uc.execute(transactions)
+        presenter.present_category_breakdown(category_breakdown)
     
     if export_choice == "y":
         export_paths = {"summary": "summary.csv", "breakdown": "category_breakdown.csv"}

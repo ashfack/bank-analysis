@@ -1,7 +1,5 @@
 from datetime import date
-from itertools import cycle
 from typing import List, Sequence
-import pandas as pd
 
 from bank_analysis.adapters.calendar_cycle import CalendarCycleGrouper
 from bank_analysis.domain.entities import Transaction

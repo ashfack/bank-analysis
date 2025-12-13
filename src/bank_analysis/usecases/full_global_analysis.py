@@ -1,7 +1,5 @@
 
-from typing import Optional, List
-from pandas import DataFrame
-
+from typing import Optional
 from .compute_aggregates import ComputeAggregatesUseCase
 from .compute_category_breakdown import ComputeCategoryBreakdownUseCase
 from .compute_monthly_summary import ComputeMonthlySummaryUseCase
@@ -10,7 +8,6 @@ from .filter_atypical_months import FilterAtypicalMonthsUseCase
 from ..ports.cycle_grouper import CycleGrouper
 from ..ports.loader import DataLoaderPort
 from ..domain import analysis as domain_analysis
-from ..domain.dto import AggregateMetrics, CategoryBreakdownRow, FilteredSummaryResult, MonthlySummaryRow
 
 class FullGlobalAnalysisUseCase:
     def __init__(self, loader: DataLoaderPort,

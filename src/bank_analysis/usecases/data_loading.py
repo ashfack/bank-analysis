@@ -1,7 +1,4 @@
 from typing import Sequence
-
-import pandas as pd
-
 from ..domain.entities import Transaction
 from ..ports.loader import DataLoaderPort
 

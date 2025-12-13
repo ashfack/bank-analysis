@@ -13,7 +13,7 @@ where = ["src"]
 [project]
 name = "bank-analysis"
 version = "0.1.0"
-description = "Hexagonal bank analysis without pandas"
+description = "Hexagonal bank analysis"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "ABDOUL AZID Ashfack" }]

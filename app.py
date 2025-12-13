@@ -1,6 +1,4 @@
 from flask import Flask, request, render_template, redirect, url_for, flash, jsonify, session
-import pandas as pd
-import io
 import os
 
 from bank_analysis.adapters.calendar_cycle import CalendarCycleGrouper
@@ -112,26 +110,6 @@ def details():
         "nb_operations": row.nb_operations
     } for row in breakdown])
 
-
-
-@app.route("/api/analyze", methods=["POST"])
-def api_analyze():
-    # JSON API: accept CSV string in JSON or uploaded file
-    data = request.get_json(silent=True) or {}
-    csv_text = data.get("csv")
-    if not csv_text and "file" in request.files:
-        csv_text = request.files["file"].read().decode("utf-8")
-
-    if not csv_text:
-        return jsonify({"error": "No CSV provided"}), 400
-
-    try:
-        df = pd.read_csv(io.StringIO(csv_text))
-    except Exception as e:
-        return jsonify({"error": f"Could not parse CSV: {e}"}), 400
-
-    results = []
-    return jsonify(results)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
