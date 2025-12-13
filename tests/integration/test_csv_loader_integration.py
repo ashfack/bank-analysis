@@ -1,5 +1,6 @@
 import os
 from bank_analysis.adapters.csv_file_loader import CsvFileDataLoader
+from bank_analysis.adapters.salary_cycle import SalaryCycleGrouper
 from bank_analysis.domain import analysis as domain_analysis
 
 HERE = os.path.dirname(__file__)
@@ -13,8 +14,8 @@ def test_csv_loader_reads_demo(tmp_path):
         tmpfile = tmp_path / "sample.csv"
         tmpfile.write_text("dateOp;dateVal;label;category;categoryParent;supplierFound;amount;comment;accountNum;accountLabel;accountbalance\n2024-07-31;2024-07-31;\"CARTE 30/07/24 TOTO\";\"Bien-être\";\"Vie quotidienne\";\"yves\";-49,40;;000;BoursoBank;4425.21\n2024-07-31;2024-07-31;\"VIR INST\";\"Virements reçus\";\"Virements reçus\";\"madame\";266,00;;000;BoursoBank;4425.21\n")
         path = str(tmpfile)
-    df = loader.load_and_prepare(path)
-    assert "month" in df.columns
-    assert df["amount"].notna().any()
-    summary = domain_analysis.compute_monthly_summary(df)
+    transactions = loader.load_and_prepare(path)
+    assert transactions[0].month is not None
+    assert transactions[0].amount is not None
+    summary = domain_analysis.compute_monthly_summary_core(transactions, cycle_grouper=SalaryCycleGrouper(transactions))
     assert len(summary) >=1

@@ -1,7 +1,9 @@
 from flask import Flask, request, render_template, redirect, url_for, flash, jsonify, session
-import pandas as pd
-import io
 import os
+
+from bank_analysis.adapters.calendar_cycle import CalendarCycleGrouper
+from bank_analysis.adapters.salary_cycle import SalaryCycleGrouper
+from bank_analysis.infrastructure import period_splicer
 from src.bank_analysis.adapters.csv_content_loader import CsvContentDataLoader
 from src.bank_analysis.usecases.compute_category_breakdown import \
   ComputeCategoryBreakdownUseCase
@@ -44,17 +46,27 @@ def analyze():
         return redirect(url_for("index"))
 
     try:
-        loader = CsvContentDataLoader(base_path=".")
 
-        data_loader_uc = DataLoadingUseCase(loader)
-        monthly_summary_uc = ComputeMonthlySummaryUseCase()
-        filtering_outliers_uc = FilterAtypicalMonthsUseCase()
-
-        df = data_loader_uc.execute(csv_text)
 
         # Read the cycle from form; default to calendar
         cycle = request.form.get("cycle", "calendar")
-        custom_analysis = monthly_summary_uc.execute(df, cycle)
+        cycle_grouper = None
+
+        loader = CsvContentDataLoader(base_path=".")
+        data_loader_uc = DataLoadingUseCase(loader)
+
+        transactions = data_loader_uc.execute(csv_text)
+
+        if cycle == "calendar": cycle_grouper = CalendarCycleGrouper()
+        elif cycle == "salary": cycle_grouper = SalaryCycleGrouper(transactions)
+
+
+        monthly_summary_uc = ComputeMonthlySummaryUseCase(cycle_grouper)
+        filtering_outliers_uc = FilterAtypicalMonthsUseCase()
+
+
+
+        custom_analysis = monthly_summary_uc.execute(transactions)
         filtering_outlier = request.form.get("filtering_outlier", "yes")
         if filtering_outlier == "yes":
             custom_analysis = filtering_outliers_uc.execute(custom_analysis).filtered
@@ -63,12 +75,12 @@ def analyze():
         return redirect(url_for("index"))
 
     # Call your refactored analysis function
-    df = loader.load_and_prepare(csv_text)
+    transactions = loader.load_and_prepare(csv_text)
 
     # Store DF in session-aware cache
     session_id = session.get("_id") or os.urandom(16).hex()
     session["_id"] = session_id
-    result_store.put(session_id, df)
+    result_store.put(session_id, transactions)
 
 
     # results should be JSON-serializable dict with keys used in the template
@@ -83,46 +95,21 @@ def details():
     if not period or not session_id:
         return jsonify([])
 
-    df = result_store.get(session_id)
-    if df is None:
+    transactions = result_store.get(session_id)
+    if transactions is None:
         return jsonify([])
 
-    if " to " in period:
-        start_str, end_str = period.split(" to ")
-        start_date = pd.to_datetime(start_str)
-        end_date = pd.to_datetime(end_str)
-        filtered_df = df[(df["dateOp"] >= start_date) & (df["dateOp"] <= end_date)]
-    else:
-        filtered_df = df[df["month"] == period]
+    spliced_transactions = period_splicer.filter_transactions_by_period(transactions, period)
 
     category_breakdown_uc = ComputeCategoryBreakdownUseCase()
-    breakdown = category_breakdown_uc.execute(filtered_df)
+    print(spliced_transactions, flush=True)
+    breakdown = category_breakdown_uc.execute(spliced_transactions)
     return jsonify([{
         "category_parent": row.category_parent,
         "total": row.total,
         "nb_operations": row.nb_operations
     } for row in breakdown])
 
-
-
-@app.route("/api/analyze", methods=["POST"])
-def api_analyze():
-    # JSON API: accept CSV string in JSON or uploaded file
-    data = request.get_json(silent=True) or {}
-    csv_text = data.get("csv")
-    if not csv_text and "file" in request.files:
-        csv_text = request.files["file"].read().decode("utf-8")
-
-    if not csv_text:
-        return jsonify({"error": "No CSV provided"}), 400
-
-    try:
-        df = pd.read_csv(io.StringIO(csv_text))
-    except Exception as e:
-        return jsonify({"error": f"Could not parse CSV: {e}"}), 400
-
-    results = []
-    return jsonify(results)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))

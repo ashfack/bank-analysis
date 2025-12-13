@@ -1,13 +1,14 @@
-import pandas as pd
-from typing import List
+from typing import List, Sequence
 from ..domain import analysis as domain_analysis
 from ..domain.dto import CategoryBreakdownRow
+from ..domain.entities import Transaction
+
 
 class ComputeCategoryBreakdownUseCase:
     def __init__(self, exclude_parents: set = domain_analysis.EXCLUDE_EXPENSE_PARENTS):
         self.exclude_parents = exclude_parents
 
-    def execute(self, df: pd.DataFrame) -> List[CategoryBreakdownRow]:
-        if df is None or df.empty:
-            raise ValueError("DataFrame is empty or None. Cannot compute category breakdown.")
-        return domain_analysis.compute_category_breakdown(df, self.exclude_parents)
+    def execute(self, transactions: Sequence[Transaction]) -> List[CategoryBreakdownRow]:
+        if transactions is None or len(transactions) == 0:
+            raise ValueError("transactions is None or empty. Cannot compute category breakdown.")
+        return domain_analysis.compute_category_breakdown(transactions, self.exclude_parents)

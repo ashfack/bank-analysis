@@ -1,29 +1,57 @@
-from io import StringIO
+from __future__ import annotations
+
+import csv
 import os
 import unicodedata
-import pandas as pd
-from typing import List, Optional
-from ..ports.loader import DataLoaderPort
+from datetime import datetime
+from io import StringIO
+from typing import List, Optional, Sequence
+
+from bank_analysis.domain.entities import Transaction
+from bank_analysis.ports.loader import DataLoaderPort
+
+
+# ---------- Utils ----------
 
 def _strip_nbsp(s: Optional[str]) -> str:
-    """Remove non-breaking spaces and normalize string."""
+    """Normalize in NFKC, suppress NBSP et other spaces, puis strip."""
     if not isinstance(s, str):
         return "" if s is None else str(s)
     s = unicodedata.normalize("NFKC", s)
     s = s.replace("\xa0", " ").replace("\u202f", " ")
     return s.strip()
 
-def parse_amount(value):
-    """Convert value to float, handle commas as decimals and quotes."""
-    if pd.isna(value):
-        return pd.NA
+
+def _normalize_header(h: Optional[str]) -> str:
+    """Normalize header (BOM, NBSP, spaces, strip)."""
+    if h is None:
+        return ""
+    h = unicodedata.normalize("NFKC", h)
+    return h.replace("\ufeff", "").replace("\xa0", " ").replace("\u202f", " ").strip()
+
+
+def parse_amount(value: Optional[str]) -> Optional[float]:
+    """
+    Converts a String to float :
+    - handles coma separator for numbers and replacing them with dots,
+    - Strip quotes,
+    - NBSP and spaces (different kinds),
+    Returns None if empty or non parseable.
+    """
+    if value is None:
+        return None
+
     s = _strip_nbsp(value)
     if s == "":
-        return pd.NA
+        return None
+
     if len(s) >= 2 and s[0] == '"' and s[-1] == '"':
         s = s[1:-1]
+
     s = s.replace(" ", "").replace("\u202f", "").replace("\xa0", "")
+
     s = s.replace(",", ".")
+
     try:
         return float(s)
     except Exception:
@@ -31,58 +59,96 @@ def parse_amount(value):
         try:
             return float(s)
         except Exception:
-            return pd.NA
+            return None
+
+
+def _detect_delimiter(header_line: str) -> str:
+    """
+    Returns ';' if no separator found.
+    """
+    semi = header_line.count(";")
+    comma = header_line.count(",")
+    if semi == 0 and comma == 0:
+        return ";"
+    return ";" if semi >= comma else ","
+
+
+# ---------- Adapter ----------
 
 class CsvFileDataLoader(DataLoaderPort):
-    """CSV adapter tuned to demo.csv (semicolon sep, comma decimals)."""
+    """
+    - Supported separators: ';' et ',' (auto-detection with first line).
+    - Encoding: 'utf-8-sig' (workaround for BOM).
+    - Minimal expected columns (min): 'dateOp', 'amount'.
+    - Optional columns: 'month', 'category', 'categoryParent'.
+    """
 
     def __init__(self, base_path: str = "."):
         self.base_path = base_path
 
     def list_csv_files(self) -> List[str]:
-        files = [f for f in os.listdir(self.base_path) if f.lower().endswith('.csv')]
-        return files
-    
+        return [f for f in os.listdir(self.base_path) if f.lower().endswith(".csv")]
 
-    def read_csv_content(self, source: str) -> pd.DataFrame:
-        """
-        Reads CSV content from either a file path or a raw string.
-        """
-        return pd.read_csv(source, sep=";", dtype=str, encoding="utf-8", keep_default_na=False)
+    def load_and_prepare(self, source: str) -> Sequence[Transaction]:
+        txns: list[Transaction] = []
 
-    def prepare_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Parses and enriches the DataFrame with date, amount, month, and category columns.
-        """
-        # dateOp -> datetime
-        if "dateOp" in df.columns:
-            df["dateOp"] = pd.to_datetime(df["dateOp"], errors="coerce", format="%Y-%m-%d")
-        else:
-            df["dateOp"] = pd.NaT
+        with open(source, encoding="utf-8-sig") as f:
+            text = f.read()
 
-        # parse amounts robustly
-        if "amount" in df.columns:
-            df["amount"] = df["amount"].apply(parse_amount).astype("Float64")
-        else:
-            df["amount"] = pd.NA
+        if not text.strip():
+            return []
 
-        # month from dateOp
-        df["month"] = df["dateOp"].dt.to_period("M").astype(str)
-
-        # ensure category columns exist
-        if "category" not in df.columns:
-            df["category"] = ""
-        if "categoryParent" not in df.columns:
-            df["categoryParent"] = ""
-
-        return df
+        lines = text.splitlines()
+        raw_header = lines[0]
+        delim = _detect_delimiter(raw_header)
 
 
+        raw_headers = raw_header.split(delim)
+        headers = [_normalize_header(h) for h in raw_headers]
 
-    def load_and_prepare(self, source: str) -> pd.DataFrame:    
-        """
-        Combines reading and preparing steps.
-        """
-        df = self.read_csv_content(source)
-        return self.prepare_dataframe(df)
-        
+        if not {"dateOp", "amount"}.issubset(set(headers)):
+            # Invalid header
+            return []
+
+        normalized_text = delim.join(headers) + "\n" + "\n".join(lines[1:])
+        io = StringIO(normalized_text)
+
+        reader = csv.DictReader(io, delimiter=delim)
+        for row in reader:
+            # Safety normalization
+            row = {_normalize_header(k): v for k, v in row.items()}
+
+            date_raw = _strip_nbsp(row.get("dateOp"))
+            amount_raw = _strip_nbsp(row.get("amount"))
+
+            if not date_raw:
+                continue
+
+            amount = parse_amount(amount_raw)
+            if amount is None:
+                continue
+
+            # Date ISO 'YYYY-MM-DD'
+            try:
+                d = datetime.fromisoformat(date_raw).date()
+            except Exception:
+                cleaned = date_raw.replace('"', '').strip()
+                try:
+                    d = datetime.fromisoformat(cleaned).date()
+                except Exception:
+                    continue
+
+            # Optional fields
+            month = _strip_nbsp(row.get("month")) or f"{d.year:04d}-{d.month:02d}"
+            category = _strip_nbsp(row.get("category"))
+            category_parent = _strip_nbsp(row.get("categoryParent"))
+
+            txns.append(Transaction(
+                date_op=d,
+                month=month,
+                category=category,
+                category_parent=category_parent,
+                amount=float(amount),
+            ))
+
+        return txns

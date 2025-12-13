@@ -52,8 +52,13 @@ Adapters → Domain models (only for constructing/transforming data) — but avo
 
 
 ## Exécution
+For the cli version
 ```bash
 python main.py
+```
+or for the UI version
+```bash
+python app.py
 ```
 
 ## Tests

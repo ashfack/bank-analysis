@@ -8,8 +8,6 @@ from ..domain.analysis import (
 )
 
 class StdoutPresenter(PresenterPort):
-    # === Public methods required by the PresenterPort ===
-
     def present_monthly_summary(self, rows: Sequence[MonthlySummaryRow]) -> None:
         print("\n=== Monthly Summary ===")
         if not rows:
