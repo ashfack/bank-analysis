@@ -1,9 +1,9 @@
 from flask import Flask, request, render_template, redirect, url_for, flash, jsonify, session
 import os
 
-from bank_analysis.adapters.calendar_cycle import CalendarCycleGrouper
-from bank_analysis.adapters.salary_cycle import SalaryCycleGrouper
-from bank_analysis.infrastructure import period_splicer
+from src.bank_analysis.adapters.calendar_cycle import CalendarCycleGrouper
+from src.bank_analysis.adapters.salary_cycle import SalaryCycleGrouper
+from src.bank_analysis.infrastructure import period_splicer
 from src.bank_analysis.adapters.csv_content_loader import CsvContentDataLoader
 from src.bank_analysis.usecases.compute_category_breakdown import \
   ComputeCategoryBreakdownUseCase
