@@ -45,28 +45,30 @@
 
     <p>
       <a href="{{ url_for('index') }}" class="back">Back</a>
-    <script>
-    document.querySelectorAll('.summary-row').forEach(row => {
-      row.addEventListener('click', () => {
-        const period = row.dataset.period;
-        fetch(`/details?period=${encodeURIComponent(period)}`)
-          .then(response => response.json())
-          .then(data => {
-            const container = document.getElementById('details-container');
-            if (!data || data.length === 0) {
-              container.innerHTML = "<p>No details available for this period.</p>";
-              return;
-            }
-            let html = `<h3>Expense Breakdown for ${period}</h3>`;
-            html += "<table><thead><tr><th>Category</th><th>Total</th><th># Ops</th></tr></thead><tbody>";
-            data.forEach(item => {
-              html += `<tr><td>${item.category_parent}</td><td>${item.total.toFixed(2)}</td><td>${item.nb_operations}</td></tr>`;
-            });
-            html += "</tbody></table>";
-            container.innerHTML = html;
+      <script>
+        document.querySelectorAll('.summary-row').forEach(row => {
+          row.addEventListener('click', () => {
+            const period = row.dataset.period;
+            fetch(`/details?period=${encodeURIComponent(period)}`)
+              .then(response => response.json())
+              .then(data => {
+                const container = document.getElementById('details-container');
+                if (!data || data.length === 0) {
+                  container.innerHTML = "<p>No details available for this period.</p>";
+                  return;
+                }
+                let html = `<h3>Expense Breakdown for ${period}</h3>`;
+                html += "<table><thead><tr><th>Category</th><th>Total</th><th># Ops</th></tr></thead><tbody>";
+                data.forEach(item => {
+                  html += `<tr><td>${item.category_parent}</td><td>${item.total.toFixed(2)}</td><td>${item.nb_operations}</td></tr>`;
+                });
+                html += "</tbody></table>";
+                container.innerHTML = html;
+              });
           });
-      });
-    });
-  </script>
+        });
+      </script>
+    </p>
+</div>
 </body>
 </html>

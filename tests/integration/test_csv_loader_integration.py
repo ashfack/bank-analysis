@@ -1,7 +1,7 @@
 import os
 from bank_analysis.adapters.csv_file_loader import CsvFileDataLoader
 from bank_analysis.adapters.salary_cycle import SalaryCycleGrouper
-from bank_analysis.domain import analysis as domain_analysis
+from bank_analysis.domain.reporting import summary as summarizer
 
 HERE = os.path.dirname(__file__)
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -17,5 +17,5 @@ def test_csv_loader_reads_demo(tmp_path):
     transactions = loader.load_and_prepare(path)
     assert transactions[0].month is not None
     assert transactions[0].amount is not None
-    summary = domain_analysis.compute_monthly_summary_core(transactions, cycle_grouper=SalaryCycleGrouper(transactions))
+    summary = summarizer.compute_monthly_summary_core(transactions, cycle_grouper=SalaryCycleGrouper(transactions))
     assert len(summary) >=1

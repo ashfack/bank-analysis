@@ -1,14 +1,14 @@
 
 from typing import Sequence, Any, List
 from dataclasses import asdict, is_dataclass
+from ..domain.reporting.policies import DEFAULT_POLICY
 from ..ports.presenter import PresenterPort
-from ..domain import analysis as domain_analysis  # for REF_THEORETICAL_SALARY
-from ..domain.analysis import (
-    MonthlySummaryRow, CategoryBreakdownRow, AggregateMetrics, FilteredSummaryResult
+from ..domain.value_objects import (
+  MonthlySummary, CategoryBreakdown, AggregateMetrics, FilteredSummary
 )
 
 class StdoutPresenter(PresenterPort):
-    def present_monthly_summary(self, rows: Sequence[MonthlySummaryRow]) -> None:
+    def present_monthly_summary(self, rows: Sequence[MonthlySummary]) -> None:
         print("\n=== Monthly Summary ===")
         if not rows:
             print("(no data)")
@@ -32,7 +32,7 @@ class StdoutPresenter(PresenterPort):
             },
         )
 
-    def present_filtered_summary(self, result: FilteredSummaryResult) -> None:
+    def present_filtered_summary(self, result: FilteredSummary) -> None:
         excluded_months = result.excluded_months or []
         print("\nExcluded months:", ", ".join(excluded_months) if excluded_months else "None")
         print("\n=== Filtered Summary (normal months) ===")
@@ -64,11 +64,11 @@ class StdoutPresenter(PresenterPort):
         print(f"Average savings: {aggregates.mean_savings:.2f} €")
         print(
             f"Average savings vs theoretical salary "
-            f"({domain_analysis.REF_THEORETICAL_SALARY:.0f} €): "
+            f"({DEFAULT_POLICY.REF_THEORETICAL_SALARY:.0f} €): "
             f"{aggregates.mean_savings_vs_theoretical:.2f} €"
         )
 
-    def present_category_breakdown(self, rows: Sequence[CategoryBreakdownRow]) -> None:
+    def present_category_breakdown(self, rows: Sequence[CategoryBreakdown]) -> None:
         print("\n=== Category Breakdown (Advanced Mode) ===")
         if not rows:
             print("(no data)")

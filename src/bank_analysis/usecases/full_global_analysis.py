@@ -7,19 +7,12 @@ from .data_loading import DataLoadingUseCase
 from .filter_atypical_months import FilterAtypicalMonthsUseCase
 from ..ports.cycle_grouper import CycleGrouper
 from ..ports.loader import DataLoaderPort
-from ..domain import analysis as domain_analysis
 
 class FullGlobalAnalysisUseCase:
     def __init__(self, loader: DataLoaderPort,
-                 cycle_grouper: CycleGrouper,
-                 salary_category: str = domain_analysis.SALARY_CATEGORY,
-                 exclude_parents: set = domain_analysis.EXCLUDE_EXPENSE_PARENTS,
-                 ref_salary: float = domain_analysis.REF_THEORETICAL_SALARY):
+                 cycle_grouper: CycleGrouper):
         self.loader = loader
         self.cycle_grouper = cycle_grouper
-        self.salary_category = salary_category
-        self.exclude_parents = exclude_parents
-        self.ref_salary = ref_salary
 
     # Orchestration method for full workflow
     def run_full_analysis(self, csv_path: str,

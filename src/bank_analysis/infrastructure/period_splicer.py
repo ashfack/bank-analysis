@@ -1,6 +1,6 @@
 
 from datetime import date, datetime
-from typing import Sequence, Iterable
+from typing import Sequence
 from bank_analysis.domain.entities import Transaction
 
 def _parse_iso_date(s: str) -> date:

@@ -1,7 +1,7 @@
 
 from datetime import date
 from bank_analysis.domain.entities import Transaction
-from bank_analysis.domain.analysis import compute_monthly_summary_core
+from bank_analysis.domain.reporting import summary
 from bank_analysis.adapters.salary_cycle import SalaryCycleGrouper
 
 def test_compute_monthly_summary_core_with_salary_cycle_two_periods_and_outside():
@@ -22,7 +22,7 @@ def test_compute_monthly_summary_core_with_salary_cycle_two_periods_and_outside(
     ]
 
     grouper = SalaryCycleGrouper(txns)
-    out = compute_monthly_summary_core(txns, cycle_grouper=grouper)
+    out = summary.compute_monthly_summary_core(txns, cycle_grouper=grouper)
 
     # Expect 3 groups: first salary period, second salary period, and the "outside" bucket
     labels = [r.month for r in out]

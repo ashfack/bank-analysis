@@ -1,9 +1,9 @@
 from typing import List
-from ..domain import analysis as domain_analysis
-from ..domain.dto import MonthlySummaryRow, FilteredSummaryResult
+from ..domain.reporting import filtering
+from ..domain.value_objects import MonthlySummary, FilteredSummary
 
 class FilterAtypicalMonthsUseCase:
-    def execute(self, monthly_summary: List[MonthlySummaryRow]) -> FilteredSummaryResult:
+    def execute(self, monthly_summary: List[MonthlySummary]) -> FilteredSummary:
         if not monthly_summary:
             raise ValueError("Monthly summary list is empty.")
-        return domain_analysis.filter_atypical_months(monthly_summary)
+        return filtering.filter_atypical_months(monthly_summary)

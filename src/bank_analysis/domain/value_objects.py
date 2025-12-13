@@ -6,7 +6,7 @@ from dataclasses import dataclass
 # ===== Domain DTOs =====
 
 @dataclass(frozen=True)
-class MonthlySummaryRow:
+class MonthlySummary:
     month: str
     total_salary: float
     total_expenses: float
@@ -15,7 +15,7 @@ class MonthlySummaryRow:
     total_savings_vs_theoretical: float
 
 @dataclass(frozen=True)
-class CategoryBreakdownRow:
+class CategoryBreakdown:
     category_parent: str
     total: float
     nb_operations: int
@@ -26,6 +26,6 @@ class AggregateMetrics:
     mean_savings_vs_theoretical: float
 
 @dataclass(frozen=True)
-class FilteredSummaryResult:
-    filtered: List[MonthlySummaryRow]
+class FilteredSummary:
+    filtered: List[MonthlySummary]
     excluded_months: List[str]

@@ -1,9 +1,10 @@
 from typing import List
-from ..domain import analysis as domain_analysis
-from ..domain.dto import MonthlySummaryRow, AggregateMetrics
+
+from ..domain.reporting  import aggregates
+from ..domain.value_objects import MonthlySummary, AggregateMetrics
 
 class ComputeAggregatesUseCase:
-    def execute(self, summary: List[MonthlySummaryRow]) -> AggregateMetrics:
+    def execute(self, summary: List[MonthlySummary]) -> AggregateMetrics:
         if summary is None:
             raise ValueError("Summary cannot be None.")
-        return domain_analysis.compute_aggregates(summary)
+        return aggregates.compute_aggregates(summary)

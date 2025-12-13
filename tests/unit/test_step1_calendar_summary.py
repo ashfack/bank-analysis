@@ -3,7 +3,8 @@ from datetime import date
 
 from bank_analysis.adapters.calendar_cycle import CalendarCycleGrouper
 from bank_analysis.domain.entities import Transaction
-from bank_analysis.domain.analysis import compute_monthly_summary_core
+from bank_analysis.domain.reporting import summary
+
 
 def test_compute_monthly_summary_core_with_calendar_cycle_basic():
     txns = [
@@ -20,7 +21,7 @@ def test_compute_monthly_summary_core_with_calendar_cycle_basic():
     ]
 
     grouper = CalendarCycleGrouper()
-    out = compute_monthly_summary_core(txns, cycle_grouper=grouper)
+    out = summary.compute_monthly_summary_core(txns, cycle_grouper=grouper)
     assert [r.month for r in out] == ["2025-01", "2025-02"]
 
     jan = out[0]
@@ -46,7 +47,7 @@ def test_groups_exist_even_if_only_one_side_present():
         Transaction(date_op=date(2025,1,3), month="2025-01", category="Groceries", category_parent="Essentials",amount=-50.0),
     ]
     grouper = CalendarCycleGrouper()
-    out = compute_monthly_summary_core(txns_exp_only, cycle_grouper=grouper)
+    out = summary.compute_monthly_summary_core(txns_exp_only, cycle_grouper=grouper)
     assert [r.month for r in out] == ["2025-01"]
     assert out[0].total_salary == 0.0
     assert out[0].total_expenses == 1050.0
@@ -56,7 +57,7 @@ def test_groups_exist_even_if_only_one_side_present():
     txns_salary_only = [
         Transaction(date_op=date(2025,3,25), month="2025-03", category="Salaire fixe", category_parent="Income", amount=3700.0),
     ]
-    out2 = compute_monthly_summary_core(txns_salary_only, cycle_grouper=grouper)
+    out2 = summary.compute_monthly_summary_core(txns_salary_only, cycle_grouper=grouper)
     assert [r.month for r in out2] == ["2025-03"]
     assert out2[0].total_expenses == 0.0
     assert out2[0].nb_expense_operations == 0
