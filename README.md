@@ -60,3 +60,12 @@ python main.py
 ```bash
 pytest --maxfail=1 --disable-warnings -q
 ```
+
+This app automatically deploys in Render at https://bank-analysis-6p5q.onrender.com/
+And you can test it there.
+
+Here are some screenshots: 
+![img.png](img.png)
+![img_1.png](img_1.png)
+![img_2.png](img_2.png)
+![img_3.png](img_3.png)
