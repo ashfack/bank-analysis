@@ -102,10 +102,9 @@ def details():
     spliced_transactions = period_splicer.filter_transactions_by_period(transactions, period)
 
     category_breakdown_uc = ComputeCategoryBreakdownUseCase()
-    print(spliced_transactions, flush=True)
     breakdown = category_breakdown_uc.execute(spliced_transactions)
     return jsonify([{
-        "category_parent": row.category_parent,
+        "category_parent": row.label,
         "total": row.total,
         "nb_operations": row.nb_operations
     } for row in breakdown])
