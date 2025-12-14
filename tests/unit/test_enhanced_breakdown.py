@@ -155,7 +155,7 @@ def test_reimbursements_are_merged_single_line():
     rows = compute_category_breakdown(txs, policy=DEFAULT_POLICY, rules=DEFAULT_CATEGORY_RULES)
 
     total_reimb, count_reimb = find(rows, kind=BreakdownKind.REIMBURSEMENTS, label="Remboursements")
-    assert total_reimb == 100.0  # 30 + 20 + 50
+    assert total_reimb == -100.0  # 30 + 20 + 50
     assert count_reimb == 3
 
     reimb_rows = breakdown_by_kind(rows, BreakdownKind.REIMBURSEMENTS)

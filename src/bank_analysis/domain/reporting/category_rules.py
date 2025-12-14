@@ -34,11 +34,11 @@ class CategoryRules:
 DEFAULT_CATEGORY_RULES = CategoryRules(
     mandatory_categories=frozenset({
         "Loyers, charges",
-        "Transports quotidiens (métro, bus…)",
-        "Energie (électricité, gaz, fuel, chauffage…)",
+        "Transports quotidiens (métro, bus...)",
+        "Energie (électricité, gaz, fuel, chauffage...)",
         "Impôts & taxes",
         "Téléphonie (fixe et mobile)",
-        "Multimedia à domicile (tv, internet, téléphonie…)",
+        "Multimedia à domicile (tv, internet, téléphonie...)",
         "Complémentaires santé",
     }),
     salary_category="Salaire fixe",
