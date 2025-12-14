@@ -1,17 +1,20 @@
 from flask import Flask, request, render_template, redirect, url_for, flash, jsonify, session
 import os
 
-from src.bank_analysis.adapters.calendar_cycle import CalendarCycleGrouper
-from src.bank_analysis.adapters.salary_cycle import SalaryCycleGrouper
-from src.bank_analysis.infrastructure import period_splicer
-from src.bank_analysis.adapters.csv_content_loader import CsvContentDataLoader
-from src.bank_analysis.usecases.compute_category_breakdown import \
+from bank_analysis.domain.value_objects import BreakdownKind
+from bank_analysis.usecases.compute_enhanced_category_breakdown import \
+  ComputeEnhancedCategoryBreakdownUseCase
+from bank_analysis.adapters.calendar_cycle import CalendarCycleGrouper
+from bank_analysis.adapters.salary_cycle import SalaryCycleGrouper
+from bank_analysis.infrastructure import period_splicer
+from bank_analysis.adapters.csv_content_loader import CsvContentDataLoader
+from bank_analysis.usecases.compute_category_breakdown import \
   ComputeCategoryBreakdownUseCase
-from src.bank_analysis.usecases.compute_monthly_summary import \
+from bank_analysis.usecases.compute_monthly_summary import \
   ComputeMonthlySummaryUseCase
-from src.bank_analysis.usecases.data_loading import DataLoadingUseCase
-from src.bank_analysis.adapters.result_in_memory_store import InMemoryResultStore
-from src.bank_analysis.usecases.filter_atypical_months import \
+from bank_analysis.usecases.data_loading import DataLoadingUseCase
+from bank_analysis.adapters.result_in_memory_store import InMemoryResultStore
+from bank_analysis.usecases.filter_atypical_months import \
   FilterAtypicalMonthsUseCase
 
 app = Flask(__name__)
@@ -87,8 +90,27 @@ def analyze():
     return render_template("results.html", results={}, customAnalysis=custom_analysis)
 
 
-@app.route("/details")
+KIND_ORDER = {
+    BreakdownKind.SALARY: 0,
+    BreakdownKind.MANDATORY: 1,
+    BreakdownKind.SUPPLIER: 2,
+    BreakdownKind.OTHER: 3,
+    BreakdownKind.REIMBURSEMENTS: 4,
+}
 
+def breakdown_sort_key(row):
+    """
+    Sort rows by:
+      1) kind order (SALARY, MANDATORY, SUPPLIER, OTHER, REIMBURSEMENTS)
+      2) then label (label) ascending
+      3) then total descending (optional)
+    """
+    kind_rank = KIND_ORDER.get(row.kind, 99)
+    # total descending -> use negative value
+    return (kind_rank, row.label.lower(), -row.total)
+
+
+@app.route("/details")
 def details():
     period = request.args.get("period")
     session_id = session.get("_id")
@@ -101,14 +123,20 @@ def details():
 
     spliced_transactions = period_splicer.filter_transactions_by_period(transactions, period)
 
-    category_breakdown_uc = ComputeCategoryBreakdownUseCase()
-    print(spliced_transactions, flush=True)
-    breakdown = category_breakdown_uc.execute(spliced_transactions)
-    return jsonify([{
-        "category_parent": row.category_parent,
-        "total": row.total,
-        "nb_operations": row.nb_operations
-    } for row in breakdown])
+    breakdown_style = request.args.get("breakdown_style", "default")
+    if breakdown_style == "enhanced":
+      breakdown_uc = ComputeEnhancedCategoryBreakdownUseCase()
+    else:
+      breakdown_uc = ComputeCategoryBreakdownUseCase()
+
+    breakdown = breakdown_uc.execute(spliced_transactions)
+
+    ordered = sorted(breakdown, key=breakdown_sort_key)
+
+    data = jsonify([{"category_parent": row.label, "total": row.total,
+                  "nb_operations": row.nb_operations, "kind": row.kind.value}
+                 for row in ordered])
+    return data
 
 
 if __name__ == "__main__":

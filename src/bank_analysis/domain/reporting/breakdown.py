@@ -39,7 +39,7 @@ def compute_category_breakdown(
   # Build rows sorted by category_parent, and round totals to 2 decimals
   rows = [
     CategoryBreakdown(
-        category_parent=cp,
+        label=cp,
         total=round(totals[cp], 2),
         nb_operations=counts[cp],
     )

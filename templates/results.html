@@ -13,6 +13,29 @@
   <div class="container">
     <h1>Analysis Results</h1>
 
+    <fieldset style="margin-top:1rem;">
+        <legend>Breakdown style</legend>
+        <label>
+          <input
+            type="radio"
+            name="breakdown_style"
+            value="standard"
+            {% if request.form.get('breakdown_style', 'standard') == 'standard' %}checked{% endif %}
+          >
+          Standard
+        </label>
+        <br>
+        <label>
+          <input
+            type="radio"
+            name="breakdown_style"
+            value="enhanced"
+            {% if request.form.get('breakdown_style') == 'enhanced' %}checked{% endif %}
+          >
+          Enhanced
+        </label>
+      </fieldset>
+
     <h2>Monthly Summary</h2>
     <table id="summary-table">
       <thead>
@@ -46,10 +69,22 @@
     <p>
       <a href="{{ url_for('index') }}" class="back">Back</a>
       <script>
+
+        function getBreakdownStyleValue() {
+              // Try to read the selected radio; fall back to 'yes' if nothing is selected
+              const checked = document.querySelector('input[name="breakdown_style"]:checked');
+              return checked ? checked.value : 'yes';
+            }
+
         document.querySelectorAll('.summary-row').forEach(row => {
           row.addEventListener('click', () => {
             const period = row.dataset.period;
-            fetch(`/details?period=${encodeURIComponent(period)}`)
+            const breakdown_style = getBreakdownStyleValue(); // 'yes' or 'no'
+            const params = new URLSearchParams({
+                      period: period,
+                      breakdown_style: breakdown_style
+                    });
+            fetch(`/details?${params.toString()}`)
               .then(response => response.json())
               .then(data => {
                 const container = document.getElementById('details-container');
