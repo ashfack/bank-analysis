@@ -54,7 +54,7 @@
             type="radio"
             name="cycle"
             value="calendar"
-            {% if request.form.get('cycle', 'calendar') == 'calendar' %}checked{% endif %}
+            {% if request.form.get('cycle') == 'calendar' %}checked{% endif %}
           >
           Monthly (calendar)
         </label>
@@ -64,7 +64,7 @@
             type="radio"
             name="cycle"
             value="salary"
-            {% if request.form.get('cycle') == 'salary' %}checked{% endif %}
+            {% if request.form.get('cycle', 'salary') == 'salary' %}checked{% endif %}
           >
           Salary-wise (salary to salary)
         </label>
@@ -77,7 +77,7 @@
             type="radio"
             name="filtering_outlier"
             value="yes"
-            {% if request.form.get('filtering_outlier', 'yes') == 'yes' %}checked{% endif %}
+            {% if request.form.get('filtering_outlier') == 'yes' %}checked{% endif %}
           >
           Yes
         </label>
@@ -87,7 +87,7 @@
             type="radio"
             name="filtering_outlier"
             value="no"
-            {% if request.form.get('filtering_outlier') == 'no' %}checked{% endif %}
+            {% if request.form.get('filtering_outlier', 'no') == 'no' %}checked{% endif %}
           >
           No
         </label>

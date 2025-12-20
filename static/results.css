@@ -56,3 +56,84 @@ tr.summary-row:hover {
 .back-link:hover {
     text-decoration: underline;
 }
+.hidden { display: none !important; }
+
+
+
+/* Accessibility helper */
+.visually-hidden {
+  position: absolute !important;
+  height: 1px; width: 1px;
+  overflow: hidden; clip: rect(1px, 1px, 1px, 1px);
+  white-space: nowrap;
+}
+
+/* Prevent background scroll when modal open */
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Modal container overlays the page */
+.modal {
+  position: fixed;
+  inset: 0;
+  display: block;
+  z-index: 1000;
+}
+
+/* Hidden state (toggled by JS) */
+.modal.hidden {
+  display: none;
+}
+
+/* Backdrop */
+.modal-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* Dialog */
+.modal-dialog {
+  position: relative;
+  background: #fff;
+  max-width: 720px;
+  width: calc(100% - 2rem);
+  margin: 5vh auto;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  outline: none;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+/* Sections */
+.modal-header, .modal-footer {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #eee;
+}
+.modal-footer { border-top: 1px solid #eee; border-bottom: none; }
+.modal-body {
+  padding: 1rem;
+  overflow: auto; /* Scroll body if tall content */
+}
+
+/* Close button */
+.modal-close {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Example button style (use your theme) */
+.btn {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ccc;
+  background: #f6f6f6;
+  border-radius: 4px;
+  cursor: pointer;
+}
+

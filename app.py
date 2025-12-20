@@ -18,7 +18,7 @@ from bank_analysis.usecases.filter_atypical_months import \
   FilterAtypicalMonthsUseCase
 
 app = Flask(__name__)
-app.secret_key = "change-me-in-production"
+app.secret_key = "change-me-in-production-hoho"
 result_store = InMemoryResultStore()
 
 
