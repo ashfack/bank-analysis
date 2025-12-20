@@ -1,19 +1,16 @@
 
 <!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Bank Analysis - Results</title>
-  
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='results.css') }}">
-      
-</head>
-<body>
-  <div class="container">
-    <h1>Analysis Results</h1>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Bank Analysis - Results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='results.css') }}">
+  </head>
+    <body>
+      <h1>Analysis Results</h1>
 
-    <fieldset style="margin-top:1rem;">
+      <!-- Breakdown style radios -->
+      <fieldset style="margin-top:1rem;">
         <legend>Breakdown style</legend>
         <label>
           <input
@@ -36,74 +33,87 @@
         </label>
       </fieldset>
 
-    <h2>Monthly Summary</h2>
-    <table id="summary-table">
-      <thead>
-        <tr>
-          <th>Period</th>
-          <th>Total Salary</th>
-          <th>Total Expenses</th>
-          <th># Expense Ops</th>
-          <th>Total Savings</th>
-          <th>Savings vs Theoretical</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in customAnalysis %}
-          <tr class="summary-row" data-period="{{ row.month }}">
-            <td>{{ row.month }}</td>
-            <td>{{ "%.2f"|format(row.total_salary) }}</td>
-            <td>{{ "%.2f"|format(row.total_expenses) }}</td>
-            <td>{{ row.nb_expense_operations }}</td>
-            <td>{{ "%.2f"|format(row.total_savings) }}</td>
-            <td>{{ "%.2f"|format(row.total_savings_vs_theoretical) }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+      <!-- Savings column toggle (no persistence; default is Total savings) -->
+      <fieldset style="margin-top:1rem;">
+        <legend>Savings column</legend>
+        <label>
+          <input
+            type="radio"
+            name="savings_mode"
+            value="total"
+            checked
+          >
+          Total savings
+        </label>
+        <br>
+        <label>
+          <input
+            type="radio"
+            name="savings_mode"
+            value="vs_theoretical"
+          >
+          Savings vs Theoretical
+        </label>
+      </fieldset>
 
-    <div id="details-container">
-      <p><em>Click a row above to see expense breakdown by category.</em></p>
+      <h2>Monthly Summary</h2>
+      <table id="summary-table">
+        <thead>
+          <tr>
+            <th>Period</th>
+            <th>Total Salary</th>
+            <th>Total Expenses</th>
+            <th># Expense Ops</th>
+            <!-- Show only one Savings header at a time; pre-hide vs_theoretical to avoid flash -->
+            <th class="savings-header savings-total">Total Savings</th>
+            <th class="savings-header savings-vs-theoretical hidden">Savings vs Theoretical</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in customAnalysis %}
+            <tr class="summary-row" data-period="{{ row.month }}">
+              <td>{{ row.month }}</td>
+              <td>{{ "%.2f"|format(row.total_salary) }}</td>
+              <td>{{ "%.2f"|format(row.total_expenses) }}</td>
+              <td>{{ row.nb_expense_operations }}</td>
+              <!-- Two savings cells; pre-hide vs_theoretical by default -->
+              <td class="savings-cell savings-total">{{ "%.2f"|format(row.total_savings) }}</td>
+              <td class="savings-cell savings-vs-theoretical hidden">{{ "%.2f"|format(row.total_savings_vs_theoretical) }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- Modal (initially hidden) -->
+    <div
+      id="details-modal"
+      class="modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="details-modal-title"
+      aria-describedby="details-modal-desc"
+    >
+      <div class="modal-backdrop" data-close="backdrop"></div>
+
+      <div class="modal-dialog" role="document" tabindex="-1">
+        <div id="details-modal-desc" class="visually-hidden">
+          Detailed breakdown of expenses by category for the selected period.
+        </div>
+
+        <section id="details-modal-body" class="modal-body">
+          <!-- DetailsView will render here -->
+          <p><em>Loading…</em></p>
+        </section>
+
+        <footer class="modal-footer">
+          <button type="button" class="btn" data-close="button">Close</button>
+        </footer>
+      </div>
     </div>
 
-    <p>
-      <a href="{{ url_for('index') }}" class="back">Back</a>
-      <script>
+      <p> <a href="{{ url_for('index') }}" class="back">Back</a> </p>
+    </div>
 
-        function getBreakdownStyleValue() {
-              // Try to read the selected radio; fall back to 'yes' if nothing is selected
-              const checked = document.querySelector('input[name="breakdown_style"]:checked');
-              return checked ? checked.value : 'yes';
-            }
-
-        document.querySelectorAll('.summary-row').forEach(row => {
-          row.addEventListener('click', () => {
-            const period = row.dataset.period;
-            const breakdown_style = getBreakdownStyleValue(); // 'yes' or 'no'
-            const params = new URLSearchParams({
-                      period: period,
-                      breakdown_style: breakdown_style
-                    });
-            fetch(`/details?${params.toString()}`)
-              .then(response => response.json())
-              .then(data => {
-                const container = document.getElementById('details-container');
-                if (!data || data.length === 0) {
-                  container.innerHTML = "<p>No details available for this period.</p>";
-                  return;
-                }
-                let html = `<h3>Expense Breakdown for ${period}</h3>`;
-                html += "<table><thead><tr><th>Category</th><th>Total</th><th># Ops</th></tr></thead><tbody>";
-                data.forEach(item => {
-                  html += `<tr><td>${item.category_parent}</td><td>${item.total.toFixed(2)}</td><td>${item.nb_operations}</td></tr>`;
-                });
-                html += "</tbody></table>";
-                container.innerHTML = html;
-              });
-          });
-        });
-      </script>
-    </p>
-</div>
+    <script src="{{ url_for('static', filename='js/results.js')  }}" type="module"></script>
 </body>
 </html>
