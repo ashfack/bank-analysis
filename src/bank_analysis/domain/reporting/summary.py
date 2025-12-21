@@ -14,7 +14,6 @@ def compute_monthly_summary_core(
 ) -> list[MonthlySummary]:
   """
   Pure domain computation. Groups using the provided CycleGrouper.
-  Step 1: calendar only (we'll add the salary cycle in Step 2).
   """
   salaries: dict[str, float] = defaultdict(float)
   expenses: dict[str, float] = defaultdict(float)

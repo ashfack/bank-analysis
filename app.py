@@ -6,7 +6,7 @@ from bank_analysis.usecases.compute_enhanced_category_breakdown import \
   ComputeEnhancedCategoryBreakdownUseCase
 from bank_analysis.adapters.calendar_cycle import CalendarCycleGrouper
 from bank_analysis.adapters.salary_cycle import SalaryCycleGrouper
-from bank_analysis.infrastructure import period_splicer
+from bank_analysis.domain import period_splicer
 from bank_analysis.adapters.csv_content_loader import CsvContentDataLoader
 from bank_analysis.usecases.compute_category_breakdown import \
   ComputeCategoryBreakdownUseCase
@@ -16,6 +16,7 @@ from bank_analysis.usecases.data_loading import DataLoadingUseCase
 from bank_analysis.adapters.result_in_memory_store import InMemoryResultStore
 from bank_analysis.usecases.filter_atypical_months import \
   FilterAtypicalMonthsUseCase
+from bank_analysis.usecases.filter_transactions import FilterTransactionsUseCase
 
 app = Flask(__name__)
 app.secret_key = "change-me-in-production-hoho"
@@ -49,9 +50,6 @@ def analyze():
         return redirect(url_for("index"))
 
     try:
-
-
-        # Read the cycle from form; default to calendar
         cycle = request.form.get("cycle", "calendar")
         cycle_grouper = None
 
@@ -63,11 +61,8 @@ def analyze():
         if cycle == "calendar": cycle_grouper = CalendarCycleGrouper()
         elif cycle == "salary": cycle_grouper = SalaryCycleGrouper(transactions)
 
-
         monthly_summary_uc = ComputeMonthlySummaryUseCase(cycle_grouper)
         filtering_outliers_uc = FilterAtypicalMonthsUseCase()
-
-
 
         custom_analysis = monthly_summary_uc.execute(transactions)
         filtering_outlier = request.form.get("filtering_outlier", "yes")
@@ -77,16 +72,13 @@ def analyze():
         flash(f"Could not parse CSV: {e}")
         return redirect(url_for("index"))
 
-    # Call your refactored analysis function
     transactions = loader.load_and_prepare(csv_text)
 
-    # Store DF in session-aware cache
+    # Store transactions in session-aware cache
     session_id = session.get("_id") or os.urandom(16).hex()
     session["_id"] = session_id
     result_store.put(session_id, transactions)
 
-
-    # results should be JSON-serializable dict with keys used in the template
     return render_template("results.html", results={}, customAnalysis=custom_analysis)
 
 
@@ -137,6 +129,33 @@ def details():
                   "nb_operations": row.nb_operations, "kind": row.kind.value}
                  for row in ordered])
     return data
+
+
+@app.route("/api/transactions")
+def transactions_list():
+    period = request.args.get("period")
+    label = request.args.get("label")
+    kind = request.args.get("kind", "standard")
+
+    session_id = session.get("_id")
+    transactions = result_store.get(session_id)
+    if transactions is None:
+      return jsonify([])
+
+
+    # Filter transactions based on period, label, kind
+    filter_transactions_uc = FilterTransactionsUseCase()
+    txs = filter_transactions_uc.execute(transactions, period, label, kind)
+
+
+    return jsonify([{
+        "date": tx.operation_date.isoformat(),
+        "amount": float(tx.amount),
+        "supplier": tx.supplier,
+        "category": tx.category,
+        "message": tx.message
+    } for tx in txs])
+
 
 
 if __name__ == "__main__":

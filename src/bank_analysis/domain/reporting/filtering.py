@@ -1,6 +1,9 @@
 from typing import List
 
-from bank_analysis.domain.value_objects import MonthlySummary, FilteredSummary
+from bank_analysis.domain import period_splicer
+from bank_analysis.domain.entities import Transaction
+from bank_analysis.domain.value_objects import MonthlySummary, FilteredSummary, \
+  BreakdownKind
 
 
 def filter_atypical_months(
@@ -21,3 +24,17 @@ def filter_atypical_months(
   ]
   filtered = [s for s in summary if s.month not in excluded_months]
   return FilteredSummary(filtered=filtered, excluded_months=excluded_months)
+
+
+def filter_transactions_by_period_label_and_kind(
+    transactions: List[Transaction],
+    period: str,
+    label: str,
+    kind: BreakdownKind) \
+    -> List[Transaction]:
+
+  period_txs = period_splicer.filter_transactions_by_period(transactions, period)
+  if kind == BreakdownKind.SUPPLIER:
+    return [t for t in period_txs if t.supplier == label]
+  return [t for t in period_txs if t.category == label]
+
