@@ -84,43 +84,23 @@
         </tbody>
       </table>
 
-      <!-- Modal (initially hidden) -->
-    <div
-      id="details-modal"
-      class="modal hidden"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="details-modal-title"
-      aria-describedby="details-modal-desc"
-    >
-      <div class="modal-backdrop" data-close="backdrop"></div>
-
-      <div class="modal-dialog" role="document" tabindex="-1">
-        <div id="details-modal-desc" class="visually-hidden">
-          Detailed breakdown of expenses by category for the selected period.
+    <div id="details-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="details-modal-title">
+        <div class="modal-header">
+          <h3 id="details-modal-title">Expense Breakdown</h3>
         </div>
-
-        <section id="details-modal-body" class="modal-body">
-          <!-- DetailsView will render here -->
-          <p><em>Loading…</em></p>
-        </section>
-
-        <footer class="modal-footer">
-          <button type="button" class="btn" data-close="button">Close</button>
-        </footer>
+        <div id="details-modal-body" class="modal-body">Loading…</div>
       </div>
     </div>
 
-
-
-    <!-- Transactions Modal -->
     <div id="transactions-modal" class="modal hidden">
       <div class="modal-backdrop"></div>
       <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="transactions-modal-title">
         <div class="modal-header">
           <h3 id="transactions-modal-title">Transactions</h3>
         </div>
-        <div id="transactions-modal-body">Loading…</div>
+        <div id="transactions-modal-body" class="modal-body">Loading…</div>
       </div>
     </div>
 

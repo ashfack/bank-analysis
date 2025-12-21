@@ -131,7 +131,7 @@ def details():
     return data
 
 
-@app.route("/api/transactions")
+@app.route("/transactions")
 def transactions_list():
     period = request.args.get("period")
     label = request.args.get("label")
@@ -145,7 +145,7 @@ def transactions_list():
 
     # Filter transactions based on period, label, kind
     filter_transactions_uc = FilterTransactionsUseCase()
-    txs = filter_transactions_uc.execute(transactions, period, label, kind)
+    transactions = filter_transactions_uc.execute(transactions, period, label, BreakdownKind(kind))
 
 
     return jsonify([{
@@ -154,7 +154,7 @@ def transactions_list():
         "supplier": tx.supplier,
         "category": tx.category,
         "message": "WAITING"
-    } for tx in txs])
+    } for tx in transactions])
 
 
 

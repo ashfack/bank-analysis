@@ -7,7 +7,7 @@ export class TransactionsService {
    */
   async fetchTransactions({ period, label, kind }) {
     const params = new URLSearchParams({ period, label, kind });
-    const resp = await fetch(`/api/transactions?${params.toString()}`);
+    const resp = await fetch(`/transactions?${params.toString()}`);
     if (!resp.ok) {
       throw new Error(`HTTP ${resp.status}`);
     }

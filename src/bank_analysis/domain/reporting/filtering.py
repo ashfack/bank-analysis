@@ -36,7 +36,7 @@ def filter_transactions_by_period_label_and_kind(
     -> List[Transaction]:
 
   period_txs = period_splicer.filter_transactions_by_period(transactions, period)
-  if kind == BreakdownKind.SUPPLIER.value:
+  if kind == BreakdownKind.SUPPLIER:
     return [t for t in period_txs if _match_supplier(getattr(t, "supplier", None), DEFAULT_CATEGORY_RULES.supplier_patterns)]
   return [t for t in period_txs if t.category.casefold() == label.casefold()]
 
