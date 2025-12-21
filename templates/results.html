@@ -52,7 +52,7 @@
             name="savings_mode"
             value="vs_theoretical"
           >
-          Savings vs Theoretical
+          Savings compared to Base Salary
         </label>
       </fieldset>
 
@@ -66,7 +66,7 @@
             <th># Expense Ops</th>
             <!-- Show only one Savings header at a time; pre-hide vs_theoretical to avoid flash -->
             <th class="savings-header savings-total">Total Savings</th>
-            <th class="savings-header savings-vs-theoretical hidden">Savings vs Theoretical</th>
+            <th class="savings-header savings-vs-theoretical hidden">Savings compared to Base Salary</th>
           </tr>
         </thead>
         <tbody>
@@ -84,35 +84,28 @@
         </tbody>
       </table>
 
-      <!-- Modal (initially hidden) -->
-    <div
-      id="details-modal"
-      class="modal hidden"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="details-modal-title"
-      aria-describedby="details-modal-desc"
-    >
-      <div class="modal-backdrop" data-close="backdrop"></div>
-
-      <div class="modal-dialog" role="document" tabindex="-1">
-        <div id="details-modal-desc" class="visually-hidden">
-          Detailed breakdown of expenses by category for the selected period.
+    <div id="details-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="details-modal-title">
+        <div class="modal-header">
+          <h3 id="details-modal-title">Expense Breakdown</h3>
         </div>
-
-        <section id="details-modal-body" class="modal-body">
-          <!-- DetailsView will render here -->
-          <p><em>Loading…</em></p>
-        </section>
-
-        <footer class="modal-footer">
-          <button type="button" class="btn" data-close="button">Close</button>
-        </footer>
+        <div id="details-modal-body" class="modal-body">Loading…</div>
       </div>
     </div>
 
-      <p> <a href="{{ url_for('index') }}" class="back">Back</a> </p>
+    <div id="transactions-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="transactions-modal-title">
+        <div class="modal-header">
+          <h3 id="transactions-modal-title">Transactions</h3>
+        </div>
+        <div id="transactions-modal-body" class="modal-body">Loading…</div>
+      </div>
     </div>
+
+
+      <p> <a href="{{ url_for('index') }}" class="back">Back</a> </p>
 
     <script src="{{ url_for('static', filename='js/results.js')  }}" type="module"></script>
 </body>

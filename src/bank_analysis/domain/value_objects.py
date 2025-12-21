@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Literal
+from typing import List
 from dataclasses import dataclass
 
 

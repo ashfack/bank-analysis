@@ -21,7 +21,7 @@ class StdoutPresenter(PresenterPort):
                 ("total_expenses", "Total Expenses"),
                 ("nb_expense_operations", "# Expense Ops"),
                 ("total_savings", "Total Savings"),
-                ("total_savings_vs_theoretical", "Savings vs Theoretical"),
+                ("total_savings_vs_theoretical", "Savings compared to Base Salary"),
             ],
             formats={
                 "total_salary": self._fmt_money,
