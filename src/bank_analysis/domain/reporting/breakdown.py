@@ -19,31 +19,31 @@ def compute_category_breakdown(
     - sorts by category_parent
 
   Returns:
-      List[CategoryBreakdown]: sorted by category_parent.
+      List[CategoryBreakdown]: sorted by category.
   """
   totals = defaultdict(float)
   counts = defaultdict(int)
 
   for tx in transactions:
-    # Skip if category_parent is missing
+    # Skip if category is missing
     cp = tx.category_parent
-    if cp is None:
+    category = tx.category
+    if category is None:
       continue
 
     # Filter non-internal (not in excluded list) and negative amounts (expenses)
     if cp not in policy.exclude_parents and tx.amount < 0:
-      # Accumulate absolute value (equivalent to pandas .abs() on the sum)
-      totals[cp] += -tx.amount
-      counts[cp] += 1
+      totals[category] += -tx.amount
+      counts[category] += 1
 
   # Build rows sorted by category_parent, and round totals to 2 decimals
   rows = [
     CategoryBreakdown(
-        label=cp,
-        total=round(totals[cp], 2),
-        nb_operations=counts[cp],
+        label=category,
+        total=round(totals[category], 2),
+        nb_operations=counts[category],
     )
-    for cp in sorted(totals.keys())
+    for category in sorted(totals.keys())
   ]
 
   return rows

@@ -12,7 +12,6 @@ from src.bank_analysis.usecases.export_use_case import ExportUseCase
 from src.bank_analysis.usecases.filter_atypical_months import \
   FilterAtypicalMonthsUseCase
 from ..adapters.csv_file_loader import CsvFileDataLoader
-from ..usecases.full_global_analysis import FullGlobalAnalysisUseCase
 from ..adapters.stdout_presenter import StdoutPresenter
 
 def choose_file_interactive(files):

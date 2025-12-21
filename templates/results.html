@@ -52,7 +52,7 @@
             name="savings_mode"
             value="vs_theoretical"
           >
-          Savings vs Theoretical
+          Savings compared to Base Salary
         </label>
       </fieldset>
 
@@ -66,7 +66,7 @@
             <th># Expense Ops</th>
             <!-- Show only one Savings header at a time; pre-hide vs_theoretical to avoid flash -->
             <th class="savings-header savings-total">Total Savings</th>
-            <th class="savings-header savings-vs-theoretical hidden">Savings vs Theoretical</th>
+            <th class="savings-header savings-vs-theoretical hidden">Savings compared to Base Salary</th>
           </tr>
         </thead>
         <tbody>
@@ -111,8 +111,21 @@
       </div>
     </div>
 
-      <p> <a href="{{ url_for('index') }}" class="back">Back</a> </p>
+
+
+    <!-- Transactions Modal -->
+    <div id="transactions-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="transactions-modal-title">
+        <div class="modal-header">
+          <h3 id="transactions-modal-title">Transactions</h3>
+        </div>
+        <div id="transactions-modal-body">Loading…</div>
+      </div>
     </div>
+
+
+      <p> <a href="{{ url_for('index') }}" class="back">Back</a> </p>
 
     <script src="{{ url_for('static', filename='js/results.js')  }}" type="module"></script>
 </body>

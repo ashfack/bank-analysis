@@ -149,11 +149,11 @@ def transactions_list():
 
 
     return jsonify([{
-        "date": tx.operation_date.isoformat(),
+        "date": tx.date_op.isoformat(),
         "amount": float(tx.amount),
         "supplier": tx.supplier,
         "category": tx.category,
-        "message": tx.message
+        "message": "WAITING"
     } for tx in txs])
 
 

@@ -2,7 +2,6 @@
 # tests/domain/reporting/test_category_breakdown_v2.py
 import datetime as dt
 import pytest
-from pandas.io.excel import register_writer
 
 from bank_analysis.domain.entities import Transaction
 from bank_analysis.domain.reporting.category_rules import DEFAULT_CATEGORY_RULES

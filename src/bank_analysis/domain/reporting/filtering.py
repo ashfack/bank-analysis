@@ -2,6 +2,8 @@ from typing import List
 
 from bank_analysis.domain import period_splicer
 from bank_analysis.domain.entities import Transaction
+from bank_analysis.domain.matcher import _match_supplier
+from bank_analysis.domain.reporting.category_rules import DEFAULT_CATEGORY_RULES
 from bank_analysis.domain.value_objects import MonthlySummary, FilteredSummary, \
   BreakdownKind
 
@@ -34,7 +36,7 @@ def filter_transactions_by_period_label_and_kind(
     -> List[Transaction]:
 
   period_txs = period_splicer.filter_transactions_by_period(transactions, period)
-  if kind == BreakdownKind.SUPPLIER:
-    return [t for t in period_txs if t.supplier == label]
-  return [t for t in period_txs if t.category == label]
+  if kind == BreakdownKind.SUPPLIER.value:
+    return [t for t in period_txs if _match_supplier(getattr(t, "supplier", None), DEFAULT_CATEGORY_RULES.supplier_patterns)]
+  return [t for t in period_txs if t.category.casefold() == label.casefold()]
 

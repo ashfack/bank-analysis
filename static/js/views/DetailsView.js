@@ -35,9 +35,14 @@ export class DetailsView {
       <tbody>`;
     for (const item of data) {
       const total = typeof item.total === 'number' ? item.total.toFixed(2) : item.total;
+
+      const label = item.label ?? item.category_parent ?? '';
+      const kind  = item.kind  ?? item.kind ?? '';
+
       const nbOps = item.nb_operations ?? '';
       const category = item.category_parent ?? '';
-      html += `<tr><td>${category}</td><td>${total}</td><td>${nbOps}</td></tr>`;
+      html += `<tr class="details-row" tabindex="0" data-label="${label}" data-kind="${kind}">
+      <td>${category}</td><td>${total}</td><td>${nbOps}</td></tr>`;
     }
     html += `</tbody></table>`;
     setHTML(this.container, html);
