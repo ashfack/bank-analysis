@@ -16,8 +16,8 @@ class FakeLoader(DataLoaderPort):
 
 def test_usecase_runs_and_presents():
     df =[
-      Transaction(date_op=date(2025,2,10), month="2025-02", category="Dinner",    category_parent="Leisure",    amount=-65.0),
-      Transaction(date_op=date(2025,3,10), month="2025-04", category="Fool",    category_parent="Hobby",    amount=-65.0)
+      Transaction(date_op=date(2025,2,10), month="2025-02", category="Dinner",    category_parent="Leisure",    amount=-65.0, message="DINNER MCDO"),
+      Transaction(date_op=date(2025,3,10), month="2025-04", category="Fool",    category_parent="Hobby",    amount=-65.0, message="Ravinder")
          ]
     loader = FakeLoader(df)
     cycle_grouper = CalendarCycleGrouper()

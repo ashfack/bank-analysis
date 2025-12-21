@@ -9,15 +9,15 @@ from bank_analysis.domain.reporting import summary
 def test_compute_monthly_summary_core_with_calendar_cycle_basic():
     txns = [
         # January
-        Transaction(date_op=date(2025,1,25), month="2025-01", category="Salaire fixe", category_parent="Income",   amount=3700.0),
-        Transaction(date_op=date(2025,1,10), month="2025-01", category="Groceries",    category_parent="Essentials",amount=-150.50),
-        Transaction(date_op=date(2025,1,15), month="2025-01", category="Rent",         category_parent="Housing",   amount=-1200.0),
-        Transaction(date_op=date(2025,1,31), month="2025-01", category="Internal debit",category_parent="Mouvements internes débiteurs",amount=-200.0),
+        Transaction(date_op=date(2025,1,25), month="2025-01", category="Salaire fixe", category_parent="Income",   amount=3700.0, message="DEFAULT MESSAGE"),
+        Transaction(date_op=date(2025,1,10), month="2025-01", category="Groceries",    category_parent="Essentials",amount=-150.50, message="DEFAULT MESSAGE"),
+        Transaction(date_op=date(2025,1,15), month="2025-01", category="Rent",         category_parent="Housing",   amount=-1200.0, message="DEFAULT MESSAGE"),
+        Transaction(date_op=date(2025,1,31), month="2025-01", category="Internal debit",category_parent="Mouvements internes débiteurs",amount=-200.0, message="DEFAULT MESSAGE"),
         # February
-        Transaction(date_op=date(2025,2,25), month="2025-02", category="Salaire fixe", category_parent="Income",    amount=3700.0),
-        Transaction(date_op=date(2025,2,5),  month="2025-02", category="Transport",    category_parent="Essentials",amount=-90.0),
-        Transaction(date_op=date(2025,2,10), month="2025-02", category="Dinner",       category_parent="Leisure",   amount=-65.0),
-        Transaction(date_op=date(2025,2,15), month="2025-02", category="Internal credit",category_parent="Mouvements internes créditeurs",amount=-50.0),
+        Transaction(date_op=date(2025,2,25), month="2025-02", category="Salaire fixe", category_parent="Income",    amount=3700.0, message="DEFAULT MESSAGE"),
+        Transaction(date_op=date(2025,2,5),  month="2025-02", category="Transport",    category_parent="Essentials",amount=-90.0, message="DEFAULT MESSAGE"),
+        Transaction(date_op=date(2025,2,10), month="2025-02", category="Dinner",       category_parent="Leisure",   amount=-65.0, message="DEFAULT MESSAGE"),
+        Transaction(date_op=date(2025,2,15), month="2025-02", category="Internal credit",category_parent="Mouvements internes créditeurs",amount=-50.0, message="DEFAULT MESSAGE"),
     ]
 
     grouper = CalendarCycleGrouper()
@@ -43,8 +43,8 @@ def test_compute_monthly_summary_core_with_calendar_cycle_basic():
 def test_groups_exist_even_if_only_one_side_present():
     # Only expenses, no salary
     txns_exp_only = [
-        Transaction(date_op=date(2025,1,5), month="2025-01", category="Rent",      category_parent="Housing",   amount=-1000.0),
-        Transaction(date_op=date(2025,1,3), month="2025-01", category="Groceries", category_parent="Essentials",amount=-50.0),
+        Transaction(date_op=date(2025,1,5), month="2025-01", category="Rent",      category_parent="Housing",   amount=-1000.0, message="DEFAULT MESSAGE"),
+        Transaction(date_op=date(2025,1,3), month="2025-01", category="Groceries", category_parent="Essentials",amount=-50.0, message="DEFAULT MESSAGE"),
     ]
     grouper = CalendarCycleGrouper()
     out = summary.compute_monthly_summary_core(txns_exp_only, cycle_grouper=grouper)
@@ -55,7 +55,7 @@ def test_groups_exist_even_if_only_one_side_present():
 
     # Only salary, no expenses
     txns_salary_only = [
-        Transaction(date_op=date(2025,3,25), month="2025-03", category="Salaire fixe", category_parent="Income", amount=3700.0),
+        Transaction(date_op=date(2025,3,25), month="2025-03", category="Salaire fixe", category_parent="Income", amount=3700.0, message="DEFAULT MESSAGE"),
     ]
     out2 = summary.compute_monthly_summary_core(txns_salary_only, cycle_grouper=grouper)
     assert [r.month for r in out2] == ["2025-03"]

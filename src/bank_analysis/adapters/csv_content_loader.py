@@ -95,13 +95,14 @@ class CsvContentDataLoader(DataLoaderPort):
             category = _strip_nbsp(row.get("category"))
             category_parent = _strip_nbsp(row.get("categoryParent"))
             supplier_found = _strip_nbsp(row.get("supplierFound"))
-
+            message = _strip_nbsp(row.get("label"))
             txns.append(Transaction(
                 date_op=d,
                 month=month,
                 category=category,
                 category_parent=category_parent,
                 amount=float(amount),
-                supplier=supplier_found
+                supplier=supplier_found,
+                message=message
             ))
         return txns

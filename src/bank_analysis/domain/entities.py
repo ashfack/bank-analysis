@@ -8,4 +8,5 @@ class Transaction:
     category: str
     category_parent: str
     amount: float              # negative => expense; positive => income
+    message: str
     supplier: str =""

@@ -8,14 +8,14 @@ from bank_analysis.adapters.salary_cycle import SalaryCycleGrouper
 def _sample_txns():
     return [
         # Salary anchors
-        Transaction(date_op=date(2025,1,25), month="2025-01", category="Salaire fixe", category_parent="Income", amount=3700.0),
-        Transaction(date_op=date(2025,2,25), month="2025-02", category="Salaire fixe", category_parent="Income", amount=3700.0),
+        Transaction(date_op=date(2025,1,25), month="2025-01", category="Salaire fixe", category_parent="Income", amount=3700.0, message="DEFAULT MESSAGE"),
+        Transaction(date_op=date(2025,2,25), month="2025-02", category="Salaire fixe", category_parent="Income", amount=3700.0, message="DEFAULT MESSAGE"),
         # Calendar-month expenses (also fall into first salary period)
-        Transaction(date_op=date(2025,1,10), month="2025-01", category="Groceries", category_parent="Essentials", amount=-50.0),
-        Transaction(date_op=date(2025,2,5),  month="2025-02", category="Transport", category_parent="Essentials", amount=-90.0),
-        Transaction(date_op=date(2025,2,10), month="2025-02", category="Dinner",    category_parent="Leisure",    amount=-65.0),
+        Transaction(date_op=date(2025,1,10), month="2025-01", category="Groceries", category_parent="Essentials", amount=-50.0, message="DEFAULT MESSAGE"),
+        Transaction(date_op=date(2025,2,5),  month="2025-02", category="Transport", category_parent="Essentials", amount=-90.0, message="DEFAULT MESSAGE"),
+        Transaction(date_op=date(2025,2,10), month="2025-02", category="Dinner",    category_parent="Leisure",    amount=-65.0, message="DEFAULT MESSAGE"),
         # Internal excluded
-        Transaction(date_op=date(2025,1,31), month="2025-01", category="Internal debit", category_parent="Mouvements internes débiteurs", amount=-200.0),
+        Transaction(date_op=date(2025,1,31), month="2025-01", category="Internal debit", category_parent="Mouvements internes débiteurs", amount=-200.0, message="DEFAULT MESSAGE"),
     ]
 
 def test_usecase_with_calendar_cycle():

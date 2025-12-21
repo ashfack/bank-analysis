@@ -153,7 +153,7 @@ def transactions_list():
         "amount": float(tx.amount),
         "supplier": tx.supplier,
         "category": tx.category,
-        "message": "WAITING"
+        "message": tx.message
     } for tx in transactions])
 
 

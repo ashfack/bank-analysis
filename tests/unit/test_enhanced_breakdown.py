@@ -15,8 +15,10 @@ def mk_tx(
     category: str | None = None,
     date: dt.date = dt.date(2025, 1, 15),
     month: str = "01-2025",
+    message: str ="DEFAULT MESSSAGE",
     parent: str | None = None,
     supplier: str | None = None,
+
 ) -> Transaction:
     """
     Helper to build a Transaction for tests.
@@ -28,7 +30,8 @@ def mk_tx(
         amount=amount,
         category=category,
         category_parent=parent,
-        supplier=supplier
+        supplier=supplier,
+        message=message
     )
 
 
