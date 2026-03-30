@@ -9,5 +9,5 @@ pytest
 pytest-cov
 
 streamlit
-
+matplotlib
 plotly

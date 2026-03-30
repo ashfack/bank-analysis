@@ -4,134 +4,136 @@ import os
 from config.config import BUDGET_FILE, INPUT_FILE, MAPPING_FILE, OUTPUT_FILE
 from loader.data_loader import DataLoader
 from model.models import BudgetDomain
-from report_generator.excel_architect import ExcelArchitect
 from orchestrator import Orchestrator
 from auto_tuner.strategy_auto_tuner import StrategyAutoTuner
 
-# 1. Page Configuration
-st.set_page_config(
-    page_title="Awesome Budgeter AI", 
-    page_icon="🤖", 
-    layout="wide"
-)
+st.set_page_config(page_title="AI Budgeter", page_icon="📊", layout="wide")
 
-st.title("📊 Awesome Budgeter: AI-Tuned Reporting")
-st.markdown("""
-    Upload your raw bank exports and configuration files. 
-    The **Auto-Tuner** will automatically find the best budget strategy for your spending patterns.
-""")
+# Session State Initialization
+if 'processed' not in st.session_state:
+    st.session_state['processed'] = False
+if 'sel_cycle' not in st.session_state:
+    st.session_state['sel_cycle'] = "All Cycles"
+if 'sel_cluster' not in st.session_state:
+    st.session_state['sel_cluster'] = "All Clusters"
 
-# 2. Sidebar / File Uploaders
+# 1. Sidebar
 with st.sidebar:
-    st.header("📂 Data Upload")
-    bank_export = st.file_uploader("Bank Operations (CSV)", type=['csv'])
-    mapping_cfg = st.file_uploader("Mapping Config (CSV)", type=['csv'])
-    budget_cfg = st.file_uploader("Budget Config (CSV)", type=['csv'])
+    st.title("🎯 Controls")
     
-    st.divider()
-    st.info("The Auto-Tuner evaluates multiple strategies (Z-Score, Median, etc.) to minimize budget variance.")
+    if st.session_state['processed']:
+        st.header("Focus Filter")
+        # Source of truth is now the results from the Orchestrator pipeline
+        df_raw = st.session_state['df_raw']
+        
+        raw_cycles = ["All Cycles"] + sorted(df_raw['cycle'].astype(str).unique().tolist(), reverse=True)
+        raw_clusters = ["All Clusters"] + sorted(df_raw['master_cluster'].astype(str).unique().tolist())
+        
+        # Ensure selection persists during reruns
+        st.session_state['sel_cycle'] = st.selectbox("Select Cycle:", raw_cycles, 
+                                                     index=raw_cycles.index(st.session_state['sel_cycle']) if st.session_state['sel_cycle'] in raw_cycles else 0)
+        st.session_state['sel_cluster'] = st.selectbox("Select Cluster:", raw_clusters, 
+                                                       index=raw_clusters.index(st.session_state['sel_cluster']) if st.session_state['sel_cluster'] in raw_clusters else 0)
+        st.divider()
 
-# 3. Main Execution Logic
-if st.button("🚀 Run Auto-Tuner & Generate Report", use_container_width=True):
+    st.header("📂 Data Ingestion")
+    bank_export = st.file_uploader("Operations (CSV)", type=['csv'])
+    mapping_cfg = st.file_uploader("Mapping (CSV)", type=['csv'])
+    budget_cfg = st.file_uploader("Budget (CSV)", type=['csv'])
+    
+    if st.button("🗑️ Reset All"):
+        st.session_state.clear()
+        st.rerun()
+
+st.title("📊 AI-Powered Financial Orchestrator")
+
+# 2. Processing
+if st.button("🚀 Synchronize & Optimize", use_container_width=True):
     if bank_export and mapping_cfg and budget_cfg:
         try:
-            # Create directories if they don't exist
             os.makedirs(os.path.dirname(INPUT_FILE), exist_ok=True)
-            os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
+            for path, file in {INPUT_FILE: bank_export, MAPPING_FILE: mapping_cfg, BUDGET_FILE: budget_cfg}.items():
+                with open(path, "wb") as f: f.write(file.getbuffer())
 
-            # Save uploaded files to the paths defined in config.py
-            files_to_save = {
-                INPUT_FILE: bank_export,
-                MAPPING_FILE: mapping_cfg,
-                BUDGET_FILE: budget_cfg
-            }
-            
-            for path, uploaded_file in files_to_save.items():
-                with open(path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
-
-            with st.spinner("🧠 AI Auto-Tuning in progress..."):
-                # --- MIRRORING YOUR main.py LOGIC ---
-                
-                # A. Load Data
+            with st.spinner("🧠 Analyzing Data via AI Orchestrator..."):
+                # Load using your DataLoader[cite: 4]
                 transactions = DataLoader.prepare_transaction_data(INPUT_FILE)
                 mapping = DataLoader.load_category_cluster_map(MAPPING_FILE)
                 overrides = DataLoader.load_budget_overrides(BUDGET_FILE)
                 domain_data = BudgetDomain(transactions, mapping, overrides)
                 
-                # B. Orchestration & Discovery
+                # Run AI Discovery & Pipeline[cite: 2, 4]
                 orch = Orchestrator(domain_data)
                 best_strat, best_params = StrategyAutoTuner.discover(orch)
-                
-                # C. Final Pipeline Run
                 final_stats = orch.run_pipeline(best_strat, best_params)
 
-                # D. Generate Physical Excel File
-                architect = ExcelArchitect(domain_data.transactions, final_stats, OUTPUT_FILE)
-                architect.generate(orch.reporting_data)
-
-            # --- 4. WEB DASHBOARD RENDERING ---
-            st.success(f"✅ Optimization Complete! Best Strategy: **{best_strat}**")
-            
-            # Convert DTO objects to a DataFrame for Streamlit
-            df_stats = pd.DataFrame([vars(s) for s in final_stats])
-            
-            # Row 1: Key Performance Indicators
-            tot_spent = df_stats['total_actual_spending'].sum()
-            tot_budget = df_stats['theoretical_budget'].sum()
-            variance = tot_budget - tot_spent
-            
-            kpi1, kpi2, kpi3 = st.columns(3)
-            kpi1.metric("Total Actual Spending", f"{tot_spent:,.2f} €")
-            kpi2.metric("AI-Calculated Budget", f"{tot_budget:,.2f} €")
-            kpi3.metric("Overall Variance", f"{variance:,.2f} €", delta_color="normal")
-
-            # Row 2: Visualizations
-            col_left, col_right = st.columns([1, 1])
-
-            with col_left:
-                st.write("### 🏗️ Spending by Cluster")
-                # Aggregate stats by cluster
-                cluster_df = df_stats.groupby('master_cluster').agg({
-                    'total_actual_spending': 'sum',
-                    'theoretical_budget': 'sum'
-                }).sort_values('total_actual_spending', ascending=False)
+                # Convert AI results (ProcessedCategory) to DataFrame[cite: 1]
+                df_stats = pd.DataFrame([vars(s) for s in final_stats])
                 
-                st.dataframe(
-                    cluster_df.style.background_gradient(cmap='YlGnBu', axis=0),
-                    use_container_width=True
-                )
-
-            with col_right:
-                st.write("### 📈 Cycle Evolution")
-                # Transform reporting_data (list of dicts) into a pivot for charting
+                # Merge the AI-discovered clusters into the raw reporting data
                 df_raw = pd.DataFrame(orch.reporting_data)
-                if not df_raw.empty:
-                    pivot_ev = df_raw.pivot_table(
-                        index='cycle', 
-                        columns='category', 
-                        values='amount', 
-                        aggfunc='sum'
-                    ).fillna(0)
-                    st.line_chart(pivot_ev)
+                # We use the results of the pipeline to define the clusters for the UI
+                ai_mapping = df_stats[['category', 'master_cluster']]
+                df_raw = df_raw.merge(ai_mapping, on='category', how='left')
 
-            # Row 3: Download Section
-            st.divider()
-            with open(OUTPUT_FILE, "rb") as file:
-                st.download_button(
-                    label="📥 Download Full Excel Report (V1 Budget Leaderboard)",
-                    data=file,
-                    file_name="Optimized_Budget_Report.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
-                )
-
+                st.session_state['df_stats'] = df_stats
+                st.session_state['df_raw'] = df_raw
+                st.session_state['processed'] = True
+                st.rerun()
         except Exception as e:
-            st.error(f"❌ Critical Error during orchestration: {e}")
-            st.exception(e) # Provides a traceback for easier debugging on HF
-    else:
-        st.warning("⚠️ Please upload all three configuration files in the sidebar to begin.")
+            st.error(f"Error during AI Orchestration: {e}")
 
-# 4. Footer
-st.markdown("---")
-st.caption("Bank Analysis Engine v1.0 | Powered by StrategyAutoTuner")
+# 3. Interactive Views
+if st.session_state.get('processed'):
+    # Logic for Tab Jumping
+    start_tab = 2 if st.session_state.get('jump_to_ledger') else 0
+    st.session_state['jump_to_ledger'] = False
+
+    tab_pilotage, tab_details, tab_ledger = st.tabs(["📑 Pilotage", "🔍 Details", "📝 Ledger"])
+
+    with tab_pilotage:
+        st.subheader("Interactive Drill-Down Grid")
+        
+        # Pivot based on the AI-discovered clusters
+        pivot = st.session_state['df_raw'].pivot_table(
+            index='cycle', columns='master_cluster', values='amount', aggfunc='sum', fill_value=0
+        )
+        
+        cycles = sorted(pivot.index.tolist(), reverse=True)
+        clusters = sorted(pivot.columns.tolist())
+
+        # Grid Rendering (Clickable Cells)
+        cols = st.columns([1.5] + [1] * len(clusters))
+        cols[0].write("**Cycle**")
+        for i, cluster in enumerate(clusters):
+            cols[i+1].write(f"**{cluster}**")
+
+        for cycle in cycles:
+            cols = st.columns([1.5] + [1] * len(clusters))
+            cols[0].write(cycle)
+            for i, cluster in enumerate(clusters):
+                val = pivot.loc[cycle, cluster]
+                if cols[i+1].button(f"{val:,.0f} €" if val > 0 else "—", key=f"{cycle}_{cluster}", use_container_width=True):
+                    st.session_state['sel_cycle'] = str(cycle)
+                    st.session_state['sel_cluster'] = str(cluster)
+                    st.session_state['jump_to_ledger'] = True
+                    st.rerun()
+
+    with tab_details:
+        st.subheader("AI Strategy Stats per Category")
+        stats_view = st.session_state['df_stats']
+        if st.session_state['sel_cluster'] != "All Clusters":
+            stats_view = stats_view[stats_view['master_cluster'] == st.session_state['sel_cluster']]
+        st.dataframe(stats_view, use_container_width=True, hide_index=True)
+
+    with tab_ledger:
+        st.subheader(f"Ledger: {st.session_state['sel_cycle']} | {st.session_state['sel_cluster']}")
+        ledger_df = st.session_state['df_raw']
+        
+        if st.session_state['sel_cycle'] != "All Cycles":
+            ledger_df = ledger_df[ledger_df['cycle'].astype(str) == st.session_state['sel_cycle']]
+        if st.session_state['sel_cluster'] != "All Clusters":
+            ledger_df = ledger_df[ledger_df['master_cluster'].astype(str) == st.session_state['sel_cluster']]
+            
+        st.metric("Total Sum", f"{ledger_df['amount'].sum():,.2f} €")
+        st.dataframe(ledger_df[['cycle', 'category', 'label', 'amount']], use_container_width=True, hide_index=True)
