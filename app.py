@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import pandas as pd
 import plotly.express as px
 from config.config import BUDGET_FILE, INPUT_FILE, MAPPING_FILE, OUTPUT_FILE
 from loader.data_loader import DataLoader
@@ -54,40 +55,52 @@ if st.button("🚀 Run Auto-Tuner & Generate Report", use_container_width=True):
                 architect = ExcelArchitect(domain_data.transactions, final_stats, OUTPUT_FILE)
                 architect.generate(orch.reporting_data)
 
-                # --- NEW: WEB DISPLAY LOGIC ---
+                # --- REVISED WEB DISPLAY LOGIC ---
                 st.divider()
                 st.subheader("📊 Executive Summary (Web View)")
 
-                # Create 3 Top-level Metrics
-                col1, col2, col3 = st.columns(3)
-                total_spent = domain_data.transactions['amount'].sum()
-                total_budget = sum(overrides.values()) # Simplified calculation
+                try:
+                    # 1. Handle Transactions (converting list of models to DF if necessary)
+                    if isinstance(domain_data.transactions, list):
+                        df_tx = pd.DataFrame([vars(t) for t in domain_data.transactions])
+                    else:
+                        df_tx = domain_data.transactions
 
-                with col1:
-                    st.metric("Total Spent", f"{total_spent:,.2f} €")
-                with col2:
-                    st.metric("Theoretical Budget", f"{total_budget:,.2f} €")
-                with col3:
-                    delta = total_budget - total_spent
-                    st.metric("Remaining", f"{delta:,.2f} €", delta_color="normal")
+                    # 2. Calculate Top-level Metrics
+                    total_spent = df_tx['amount'].abs().sum() 
+                    # Use your actual budget values from the overrides dict
+                    total_budget = sum(overrides.values()) if isinstance(overrides, dict) else 0
 
-                # Display the Pivot Table with Heatmap styling
-                st.write("### Spending by Cluster")
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Total Spent", f"{total_spent:,.2f} €")
+                    with col2:
+                        st.metric("Theoretical Budget", f"{total_budget:,.2f} €")
+                    with col3:
+                        delta = total_budget - total_spent
+                        st.metric("Remaining", f"{delta:,.2f} €", delta_color="normal")
 
-                # We grab the reporting data you already calculated
-                df_summary = orch.reporting_data  
+                    # 3. Display the Pivot Table (Reporting Data)
+                    st.write("### Spending by Cluster")
+                    
+                    # Ensure reporting_data is a DataFrame for display
+                    df_summary = orch.reporting_data
+                    if isinstance(df_summary, pd.DataFrame):
+                        st.dataframe(df_summary.style.background_gradient(axis=0, cmap='YlOrRd'), use_container_width=True)
+                        
+                        # 4. Interactive Bar Chart
+                        import plotly.express as px
+                        # Transpose so months are on X-axis and Clusters are the legend
+                        fig = px.bar(df_summary.T, barmode='group', title="Monthly Spending Trends")
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.info("No pivot data available for display.")
 
-                # Simple coloring logic for the web table
-                def color_budget(val):
-                    color = 'red' if val > 1000 else 'green' # Example logic
-                    return f'color: {color}'
-
-                st.dataframe(df_summary.style.background_gradient(cmap='YlOrRd'), use_container_width=True)
-
-                # Add a Plotly Chart for Evolution
-                fig = px.bar(df_summary.T, title="Monthly Evolution by Category")
-                st.plotly_chart(fig, use_container_width=True)
+                except Exception as visual_err:
+                    st.warning(f"Note: UI Summary couldn't render, but your Excel is ready. Error: {visual_err}")
                 
+                # --- REVISED WEB DISPLAY LOGIC ---
+
                 st.success("✅ V1 Budget Leaderboard generated!")
 
                 # 5. Download Button
