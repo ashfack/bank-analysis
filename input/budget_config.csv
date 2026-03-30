@@ -1,0 +1,11 @@
+category;budget_override
+# --- Fixed Monthly Allowances ---
+#Loyer;850
+# --- Dynamic Adjustments ---
+#Courses Alimentaires;+50
+#Sorties et Restos;+10%
+# --- Buffer for specific categories ---
+#Cadeaux;200
+# This line is a comment and will be ignored
+4. Other Punctual;27%
+4. Other Recurring;68%
