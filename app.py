@@ -69,7 +69,19 @@ if st.button("🚀 Run Auto-Tuner & Generate Report", use_container_width=True):
                     # 2. Calculate Top-level Metrics
                     total_spent = df_tx['amount'].abs().sum() 
                     # Use your actual budget values from the overrides dict
-                    total_budget = sum(overrides.values()) if isinstance(overrides, dict) else 0
+                    st.write("Debug - Overrides Type:", type(overrides))
+                    st.write("Debug - First 3 Overrides:", list(overrides.values())[:3])
+                    try:
+                        # Convert all values in the overrides dict to floats, ignoring non-numeric strings
+                        clean_budgets = []
+                        for val in overrides.values():
+                            try:
+                                clean_budgets.append(float(val))
+                            except (ValueError, TypeError):
+                                continue
+                        total_budget = sum(clean_budgets)
+                    except Exception:
+                        total_budget = 0.0
 
                     col1, col2, col3 = st.columns(3)
                     with col1:
