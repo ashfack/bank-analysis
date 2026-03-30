@@ -1,16 +1,26 @@
-# Read the doc: https://huggingface.co/docs/hub/spaces-sdks-docker
-# you will also find guides on how best to write your Dockerfile
+# Use the official lightweight Python image
+FROM python:3.12-slim
 
-FROM python:3.9
-
+# Step 1: Create a non-root user for security (HF requirement)
 RUN useradd -m -u 1000 user
 USER user
-ENV PATH="/home/user/.local/bin:$PATH"
+ENV PATH="/home/user/.local/bin:${PATH}"
 
-WORKDIR /app
+# Step 2: Set the working directory
+WORKDIR /home/user/app
 
-COPY --chown=user ./requirements.txt requirements.txt
+# Step 3: Copy requirements and install
+# We do this before copying the whole app to leverage Docker's cache
+COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
-COPY --chown=user . /app
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
+# Step 4: Copy the rest of the application
+# Using --chown=user ensures our non-root user owns the files
+COPY --chown=user . .
+
+# Step 5: Inform HF which port to use
+EXPOSE 7860
+
+# Step 6: Start Streamlit
+# We force the port to 7860 and the address to 0.0.0.0
+CMD ["streamlit", "run", "app.py", "--server.port", "7860", "--server.address", "0.0.0.0"]
