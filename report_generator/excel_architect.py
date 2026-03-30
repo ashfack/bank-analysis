@@ -1,124 +1,123 @@
-from typing import List, Dict, Any
 import pandas as pd
-from config.config import DOMAIN_DATE
-from model.models import ProcessedCategory, Transaction
+from typing import Dict, Any, List
+from model.models import BudgetView, ProcessedCategory
 
 class ExcelArchitect:
-    def __init__(self, transactions: List[Transaction], processed_results: List[ProcessedCategory], output_path: str):
-        # Store full transactions to preserve all columns (like dateOperation)
-        self.df = pd.DataFrame([t.__dict__ for t in transactions])
-        self.mapping_df = pd.DataFrame([p.__dict__ for p in processed_results])
+    def __init__(self, output_path: str):
         self.output_path = output_path
+        self.sheet_pilotage = "📑 Pilotage"
+        self.sheet_mapping = "🔍 AI Mapping"
+        self.sheet_details = "📝 Ledger"
 
-    def generate(self, enriched_data: List[dict]):
-        """Main entry point to orchestrate file creation."""
-        # 1. Data Preparation
-        summary = self._prepare_summary(enriched_data)
-        pivot = self._create_pivot(summary)
-        budget_line = self._calculate_budget_line(pivot.columns)
-        
-        details = summary.sort_values(['cycle', 'master_cluster', DOMAIN_DATE]).reset_index(drop=True)
-        mapping_sorted = self.mapping_df.sort_values(
-            ['master_cluster', 'total_actual_spending'], 
-            ascending=[True, False]
-        ).reset_index(drop=True)
+    def generate(self, view: BudgetView, raw_transactions: List[Dict]):
+        """
+        The Main Entry Point.
+        Uses BudgetView for summary and raw_transactions for the deep-dive ledger.
+        """
+        # 1. Prepare Dataframes
+        pilotage_df = self._prepare_pilotage_df(view)
+        mapping_df = pd.DataFrame([vars(c) for c in view.processed_categories])
+        mapping_df = mapping_df.sort_values("master_cluster").reset_index(drop=True)
+        ledger_df = self._prepare_ledger_df(view, raw_transactions)
+        ledger_df = ledger_df.sort_values(['cycle', 'master_cluster'], ascending=[False, True]).reset_index(drop=True)
 
-        # 2. File Writing
         with pd.ExcelWriter(self.output_path, engine='xlsxwriter') as writer:
-            # startrow=0 allows Headers on Row 0
-            pivot.to_excel(writer, sheet_name='Pilotage', startrow=0)
-            mapping_sorted.to_excel(writer, sheet_name='Mapping', index=False)
-            details.to_excel(writer, sheet_name='Details', index=False)
+            # Write raw data
+            pilotage_df.to_excel(writer, sheet_name=self.sheet_pilotage, startrow=1)
+            mapping_df.to_excel(writer, sheet_name=self.sheet_mapping, index=False)
+            ledger_df.to_excel(writer, sheet_name=self.sheet_details, index=False)
             
-            self._apply_styles(writer, pivot, budget_line, mapping_sorted, details)
-            
-            for s in writer.sheets.values(): 
-                s.set_column(0, 25, 20)
+            # Apply specialized Excel logic (Colors & Links)
+            self._apply_advanced_styling(writer, view, pilotage_df, mapping_df, ledger_df)
 
-    def _prepare_summary(self, enriched_data: List[dict]) -> pd.DataFrame:
-        """Merges cycle labels into the full transaction dataframe safely."""
-        enriched_df = pd.DataFrame(enriched_data)
-        
-        if self.df.empty:
-            summary = enriched_df.copy()
-        else:
-            summary = self.df.copy()
-            if not enriched_df.empty and len(enriched_df) == len(summary):
-                summary['cycle'] = enriched_df['cycle'].values
+    def _prepare_pilotage_df(self, view: BudgetView) -> pd.DataFrame:
+        data = []
+        for cycle in view.cycles:
+            row = {"cycle": cycle}
+            for cluster in view.clusters:
+                row[cluster] = view.get_amount(cycle, cluster)
+            data.append(row)
+        return pd.DataFrame(data).set_index("cycle")
 
-        if 'cycle' not in summary.columns:
-            summary['cycle'] = 'Unknown'
+    def _prepare_ledger_df(self, view: BudgetView, raw_transactions: List[Dict]) -> pd.DataFrame:
+        df = pd.DataFrame(raw_transactions)
+        # Ensure AI-discovered clusters are attached to the ledger
+        cat_map = {c.category: c.master_cluster for c in view.processed_categories}
+        df['master_cluster'] = df['category'].map(cat_map)
+        return df.sort_values(['cycle', 'master_cluster', 'amount'], ascending=[False, True, False])
 
-        if 'category' not in summary.columns:
-            return pd.DataFrame(columns=['category', 'cycle', 'master_cluster', 'amount'])
+    def _apply_advanced_styling(self, writer, view: BudgetView, pivot, mapping, ledger):
+        wb = writer.book
+        ws_p = writer.sheets[self.sheet_pilotage]
+        styles = self._get_styles(wb)
 
-        return summary.merge(self.mapping_df[['category', 'master_cluster']], on='category', how='left')
-
-    def _create_pivot(self, summary: pd.DataFrame) -> pd.DataFrame:
-        return summary.pivot_table(
-            index='cycle', columns='master_cluster', values='amount', 
-            aggfunc=lambda x: x.abs().sum()
-        ).fillna(0).round(2)
-
-    def _calculate_budget_line(self, columns: pd.Index) -> pd.Series:
-        return self.mapping_df.groupby('master_cluster')['theoretical_budget'].sum().reindex(columns, fill_value=0).round(2)
-
-    def _apply_styles(self, writer, pivot, budget_line, mapping_df, details):
-        wb, ws_p = writer.book, writer.sheets['Pilotage']
-        styles = self._get_excel_styles(wb)
-
-        # 1. Create Named Ranges for Mapping and Details
-        map_links = self._create_named_ranges(wb, mapping_df, "Mapping", "MAP", 2)
-        detail_links = self._create_named_ranges(wb, details, "Details", "DTL", 2, 
+        # 1. Create Named Ranges for Hyperlinks (The 'Smart' part)
+        map_links = self._create_named_ranges(wb, mapping, self.sheet_mapping, "MAP", 1)
+        ledger_links = self._create_named_ranges(wb, ledger, self.sheet_details, "LDR", 1, 
                                                 group_cols=['cycle', 'master_cluster'])
 
-        # 2. Header Navigation (Row 0)
-        # Link the Cluster names to the Mapping tab
-        ws_p.write(0, 0, "cycle", styles['header']) # Top-left corner
-        for c_idx, cluster in enumerate(pivot.columns):
-            target_map = map_links.get(str(cluster))
-            if target_map:
-                ws_p.write_url(0, c_idx + 1, f"internal:{target_map}", 
-                               cell_format=styles['header'], string=str(cluster))
-            else:
-                ws_p.write(0, c_idx + 1, str(cluster), styles['header'])
+        # 2. Render Navigation Header (Row 0)
+        ws_p.write(0, 0, "cycle", styles['header'])
+        for c_idx, cluster in enumerate(view.clusters):
+            target = map_links.get(cluster)
+            ws_p.write_url(0, c_idx + 1, f"internal:{target}" if target else "", 
+                           cell_format=styles['header'], string=cluster)
 
-        # 3. Write the Budget Line at Row 1
+        # 3. Render Budget Line (Row 1) - THE OVERRIDES
         ws_p.write(1, 0, "BUDGET THEORIQUE", styles['budget'])
-        for c_idx, cluster in enumerate(pivot.columns):
-            limit = float(budget_line.get(cluster, 0))
-            ws_p.write_number(1, c_idx + 1, limit, styles['budget'])
+        for c_idx, cluster in enumerate(view.clusters):
+            ws_p.write_number(1, c_idx + 1, view.get_budget(cluster), styles['budget'])
 
-        # 4. Style the Dashboard Data (Starting at Row 2)
-        for r_idx, cycle in enumerate(pivot.index):
-            ws_p.write(r_idx + 2, 0, str(cycle), styles['neutral'])
-            for c_idx, cluster in enumerate(pivot.columns):
-                val = float(pivot.loc[cycle, cluster])
-                limit = float(budget_line.get(cluster, 0))
-                st = self._determine_color(val, limit, cluster, styles)
+        # 4. Render Data Grid with Conditional Coloring & Hyperlinks to Ledger
+        for r_idx, cycle in enumerate(view.cycles):
+            ws_p.write(r_idx + 2, 0, cycle, styles['neutral'])
+            for c_idx, cluster in enumerate(view.clusters):
+                val = view.get_amount(cycle, cluster)
+                limit = view.get_budget(cluster)
                 
-                target_dtl = detail_links.get((str(cycle), str(cluster)))
-                self._write_smart_cell(ws_p, r_idx + 2, c_idx + 1, val, st, target_dtl)
+                # Logic for coloring based on BudgetView thresholds
+                fmt = self._determine_color(val, limit, cluster, styles)
+
+                cell_row = r_idx + 2
+                cell_col = c_idx + 1
+                
+                # Link cell to the specific group in the Ledger sheet
+                target_ldr = ledger_links.get((str(cycle), str(cluster)))
+                if target_ldr and val > 0:
+                    ws_p.write_url(cell_row, cell_col, 
+                                   f"internal:{target_ldr}", 
+                                   cell_format=fmt)
+                    ws_p.write_number(cell_row, cell_col, val, fmt)
+                else:
+                    ws_p.write_number(r_idx + 2, c_idx + 1, val, fmt)
 
     def _create_named_ranges(self, wb, df, sheet, prefix, start_row, group_cols='master_cluster'):
         links = {}
-        curr_row = int(start_row)
-        
+        curr_row = start_row + 1 # Offset for header
         for key, group in df.groupby(group_cols, sort=False):
             lookup_key = tuple(map(str, key)) if isinstance(key, tuple) else str(key)
             range_id = f"{prefix}_{abs(hash(lookup_key))}"
-            
-            group_len = len(group)
-            end_row = curr_row + group_len - 1
-            range_string = f"='{sheet}'!$A${curr_row}:$G${end_row}"
-            
-            wb.define_name(range_id, range_string)
+            wb.define_name(range_id, f"='{sheet}'!$A${curr_row}:$G${curr_row + len(group) - 1}")
             links[lookup_key] = range_id
-            curr_row += group_len
-            
+            curr_row += len(group)
         return links
 
-    def _get_excel_styles(self, wb) -> Dict[str, Any]:
+    def _determine_color(self, val: float, limit: float, cluster: str, styles: dict):
+        """Restored original business logic for coloring."""
+        # Internal/Incoming logic (always green if positive)
+        if "0." in cluster or val == 0: 
+            return styles['dark_green'] if val > 0 else styles['neutral']
+        
+        # Spending logic based on theoretical limit
+        if val <= limit: 
+            # If well under budget (>50% buffer), stay dark green. Otherwise light green.
+            return styles['light_green'] if val > limit * 0.5 else styles['dark_green']
+        
+        # Over-budget logic
+        return styles['orange'] if val <= limit * 1.5 else styles['red']
+
+    def _get_styles(self, wb) -> Dict[str, Any]:
+        """Restored original high-fidelity styling."""
         fmt_base = {'underline': 1, 'num_format': '# ##0.00', 'border': 1}
         header_fmt = wb.add_format({
             'bold': True, 'align': 'center', 'bg_color': '#D9D9D9', 'border': 1
@@ -135,16 +134,3 @@ class ExcelArchitect:
                 'bg_color': '#F2F2F2', 'border': 1, 'bold': True
             })
         }
-
-    def _determine_color(self, val: float, limit: float, cluster: str, styles: dict):
-        if "0." in cluster or val == 0: 
-            return styles['dark_green'] if val > 0 else styles['neutral']
-        if val <= limit: 
-            return styles['light_green'] if val > limit * 0.5 else styles['dark_green']
-        return styles['orange'] if val <= limit * 1.5 else styles['red']
-
-    def _write_smart_cell(self, sheet, row, col, val, fmt, target=None):
-        if target and val > 0:
-            sheet.write_url(row, col, f"internal:{target}", cell_format=fmt, string=str(round(val, 2)))
-        else:
-            sheet.write_number(row, col, val, fmt)

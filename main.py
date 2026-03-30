@@ -22,6 +22,8 @@ if __name__ == "__main__":
     
     final_stats = orch.run_pipeline(best_strat, best_params)
 
-    architect = ExcelArchitect(domain_data.transactions, final_stats, OUTPUT_FILE)
-    architect.generate(orch.reporting_data)
+    view = orch.run_analytics(best_strat, best_params)
+    architect = ExcelArchitect(OUTPUT_FILE)
+    architect.generate(view, orch.reporting_data)
+    
     print(f"✅ V1 Budget Leaderboard generated.")

@@ -99,3 +99,29 @@ class ProcessedCategory:
     base_limit: float
     theoretical_budget: float
     total_actual_spending: float
+
+@dataclass(frozen=True)
+class BudgetView:
+    """
+    A Pure Domain Object representing the final 'Pilotage' state.
+    Uses standard Python types to remain infrastructure-agnostic.
+    """
+    # { "Cycle_Date": { "Cluster_Name": Amount } }
+    matrix: Dict[str, Dict[str, float]]
+    # { "Cluster_Name": Theoretical_Budget }
+    cluster_budgets: Dict[str, float]
+    processed_categories: List[ProcessedCategory]
+
+    @property
+    def cycles(self) -> List[str]:
+        return sorted(self.matrix.keys(), reverse=True)
+
+    @property
+    def clusters(self) -> List[str]:
+        return sorted(self.cluster_budgets.keys())
+
+    def get_amount(self, cycle: str, cluster: str) -> float:
+        return self.matrix.get(cycle, {}).get(cluster, 0.0)
+    
+    def get_budget(self, cluster: str) -> float:
+        return self.cluster_budgets.get(cluster, 0.0)

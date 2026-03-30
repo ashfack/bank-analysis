@@ -1,39 +1,48 @@
 import streamlit as st
-import pandas as pd
 import os
+import pandas as pd
 from config.config import BUDGET_FILE, INPUT_FILE, MAPPING_FILE, OUTPUT_FILE
 from loader.data_loader import DataLoader
 from model.models import BudgetDomain
 from orchestrator import Orchestrator
 from auto_tuner.strategy_auto_tuner import StrategyAutoTuner
+from report_generator.excel_architect import ExcelArchitect
 
-st.set_page_config(page_title="AI Budgeter", page_icon="📊", layout="wide")
+# 1. Page Configuration
+st.set_page_config(page_title="AI Financial Orchestrator", page_icon="📊", layout="wide")
 
-# Session State Initialization
+# Initialize Session State for persistence across reruns
 if 'processed' not in st.session_state:
     st.session_state['processed'] = False
 if 'sel_cycle' not in st.session_state:
     st.session_state['sel_cycle'] = "All Cycles"
 if 'sel_cluster' not in st.session_state:
     st.session_state['sel_cluster'] = "All Clusters"
+if 'active_tab' not in st.session_state:
+    st.session_state['active_tab'] = 0
 
-# 1. Sidebar
+# 2. Sidebar: Navigation & Controls
 with st.sidebar:
-    st.title("🎯 Controls")
+    st.title("🎯 Control Panel")
     
     if st.session_state['processed']:
         st.header("Focus Filter")
-        # Source of truth is now the results from the Orchestrator pipeline
-        df_raw = st.session_state['df_raw']
+        view = st.session_state['budget_view']
         
-        raw_cycles = ["All Cycles"] + sorted(df_raw['cycle'].astype(str).unique().tolist(), reverse=True)
-        raw_clusters = ["All Clusters"] + sorted(df_raw['master_cluster'].astype(str).unique().tolist())
+        # Sync Sidebar with the Domain View Model (The Contract)
+        cycles_list = ["All Cycles"] + view.cycles
+        clusters_list = ["All Clusters"] + view.clusters
         
-        # Ensure selection persists during reruns
-        st.session_state['sel_cycle'] = st.selectbox("Select Cycle:", raw_cycles, 
-                                                     index=raw_cycles.index(st.session_state['sel_cycle']) if st.session_state['sel_cycle'] in raw_cycles else 0)
-        st.session_state['sel_cluster'] = st.selectbox("Select Cluster:", raw_clusters, 
-                                                       index=raw_clusters.index(st.session_state['sel_cluster']) if st.session_state['sel_cluster'] in raw_clusters else 0)
+        st.session_state['sel_cycle'] = st.selectbox(
+            "Select Cycle (Period):", 
+            cycles_list, 
+            index=cycles_list.index(st.session_state['sel_cycle']) if st.session_state['sel_cycle'] in cycles_list else 0
+        )
+        st.session_state['sel_cluster'] = st.selectbox(
+            "Select Cluster:", 
+            clusters_list, 
+            index=clusters_list.index(st.session_state['sel_cluster']) if st.session_state['sel_cluster'] in clusters_list else 0
+        )
         st.divider()
 
     st.header("📂 Data Ingestion")
@@ -41,99 +50,129 @@ with st.sidebar:
     mapping_cfg = st.file_uploader("Mapping (CSV)", type=['csv'])
     budget_cfg = st.file_uploader("Budget (CSV)", type=['csv'])
     
-    if st.button("🗑️ Reset All"):
+    if st.button("🗑️ Reset Application"):
         st.session_state.clear()
         st.rerun()
 
 st.title("📊 AI-Powered Financial Orchestrator")
 
-# 2. Processing
+# 3. Execution Engine
 if st.button("🚀 Synchronize & Optimize", use_container_width=True):
     if bank_export and mapping_cfg and budget_cfg:
         try:
+            # Physical File Sync (Infrastructure)
             os.makedirs(os.path.dirname(INPUT_FILE), exist_ok=True)
             for path, file in {INPUT_FILE: bank_export, MAPPING_FILE: mapping_cfg, BUDGET_FILE: budget_cfg}.items():
                 with open(path, "wb") as f: f.write(file.getbuffer())
 
-            with st.spinner("🧠 Analyzing Data via AI Orchestrator..."):
-                # Load using your DataLoader[cite: 4]
+            with st.spinner("🧠 Orchestrating Domain Logic..."):
+                # Load Domain Data via Port
                 transactions = DataLoader.prepare_transaction_data(INPUT_FILE)
                 mapping = DataLoader.load_category_cluster_map(MAPPING_FILE)
                 overrides = DataLoader.load_budget_overrides(BUDGET_FILE)
                 domain_data = BudgetDomain(transactions, mapping, overrides)
                 
-                # Run AI Discovery & Pipeline[cite: 2, 4]
+                # Execute Orchestrator (Domain Logic)
                 orch = Orchestrator(domain_data)
                 best_strat, best_params = StrategyAutoTuner.discover(orch)
-                final_stats = orch.run_pipeline(best_strat, best_params)
-
-                # Convert AI results (ProcessedCategory) to DataFrame[cite: 1]
-                df_stats = pd.DataFrame([vars(s) for s in final_stats])
                 
-                # Merge the AI-discovered clusters into the raw reporting data
-                df_raw = pd.DataFrame(orch.reporting_data)
-                # We use the results of the pipeline to define the clusters for the UI
-                ai_mapping = df_stats[['category', 'master_cluster']]
-                df_raw = df_raw.merge(ai_mapping, on='category', how='left')
-
-                st.session_state['df_stats'] = df_stats
-                st.session_state['df_raw'] = df_raw
+                # REFACTOR: run_analytics returns the Pure Domain BudgetView
+                view = orch.run_analytics(best_strat, best_params)
+                architect = ExcelArchitect(OUTPUT_FILE)
+                architect.generate(view, orch.reporting_data)
+                st.session_state['budget_view'] = view
+                st.session_state['raw_data'] = pd.DataFrame(orch.reporting_data) # For Ledger detail
                 st.session_state['processed'] = True
                 st.rerun()
         except Exception as e:
-            st.error(f"Error during AI Orchestration: {e}")
+            st.error(f"Orchestration Error: {e}")
 
-# 3. Interactive Views
+# 4. Interactive Dashboard (The Adapter)
 if st.session_state.get('processed'):
-    # Logic for Tab Jumping
-    start_tab = 2 if st.session_state.get('jump_to_ledger') else 0
-    st.session_state['jump_to_ledger'] = False
+    view = st.session_state['budget_view']
+    
+    # Navigation Tabs
+    tabs = st.tabs(["📑 Pilotage", "🔍 Details", "📝 Ledger"])
 
-    tab_pilotage, tab_details, tab_ledger = st.tabs(["📑 Pilotage", "🔍 Details", "📝 Ledger"])
-
-    with tab_pilotage:
-        st.subheader("Interactive Drill-Down Grid")
+    # --- TAB 1: PILOTAGE (Clickable Matrix) ---
+    with tabs[0]:
+        st.subheader("Master Cluster Time-Series")
+        st.caption("Click any cell to drill down into specific transactions in the Ledger.")
         
-        # Pivot based on the AI-discovered clusters
-        pivot = st.session_state['df_raw'].pivot_table(
-            index='cycle', columns='master_cluster', values='amount', aggfunc='sum', fill_value=0
-        )
-        
-        cycles = sorted(pivot.index.tolist(), reverse=True)
-        clusters = sorted(pivot.columns.tolist())
+        clusters = view.clusters
+        cycles = view.cycles
 
-        # Grid Rendering (Clickable Cells)
-        cols = st.columns([1.5] + [1] * len(clusters))
-        cols[0].write("**Cycle**")
+        # Header Row (Clusters)
+        header_cols = st.columns([1.5] + [1] * len(clusters))
+        header_cols[0].write("**Cycle**")
         for i, cluster in enumerate(clusters):
-            cols[i+1].write(f"**{cluster}**")
+            header_cols[i+1].markdown(f"<div style='text-align: center'><b>{cluster}</b></div>", unsafe_allow_html=True)
 
-        for cycle in cycles:
-            cols = st.columns([1.5] + [1] * len(clusters))
-            cols[0].write(cycle)
-            for i, cluster in enumerate(clusters):
-                val = pivot.loc[cycle, cluster]
-                if cols[i+1].button(f"{val:,.0f} €" if val > 0 else "—", key=f"{cycle}_{cluster}", use_container_width=True):
-                    st.session_state['sel_cycle'] = str(cycle)
-                    st.session_state['sel_cluster'] = str(cluster)
-                    st.session_state['jump_to_ledger'] = True
-                    st.rerun()
-
-    with tab_details:
-        st.subheader("AI Strategy Stats per Category")
-        stats_view = st.session_state['df_stats']
-        if st.session_state['sel_cluster'] != "All Clusters":
-            stats_view = stats_view[stats_view['master_cluster'] == st.session_state['sel_cluster']]
-        st.dataframe(stats_view, use_container_width=True, hide_index=True)
-
-    with tab_ledger:
-        st.subheader(f"Ledger: {st.session_state['sel_cycle']} | {st.session_state['sel_cluster']}")
-        ledger_df = st.session_state['df_raw']
+        # Budget Row (Overrides Applied)
+        budget_cols = st.columns([1.5] + [1] * len(clusters))
+        budget_cols[0].markdown("*:blue[BUDGET THEORIQUE]*")
+        for i, cluster in enumerate(clusters):
+            budget_val = view.get_budget(cluster)
+            budget_cols[i+1].markdown(f"<div style='text-align: center; color: #1E90FF;'><b>{budget_val:,.0f} €</b></div>", unsafe_allow_html=True)
         
-        if st.session_state['sel_cycle'] != "All Cycles":
-            ledger_df = ledger_df[ledger_df['cycle'].astype(str) == st.session_state['sel_cycle']]
+        st.divider()
+
+        # Data Rows (Cycles)
+        for cycle in cycles:
+            row_cols = st.columns([1.5] + [1] * len(clusters))
+            row_cols[0].write(cycle)
+            for i, cluster in enumerate(clusters):
+                val = view.get_amount(cycle, cluster)
+                btn_label = f"{val:,.0f} €" if val > 0 else "—"
+                
+                # DRILL-DOWN LOGIC: Button updates sidebar filters and triggers Ledger jump
+                if row_cols[i+1].button(btn_label, key=f"btn_{cycle}_{cluster}", use_container_width=True):
+                    st.session_state['sel_cycle'] = cycle
+                    st.session_state['sel_cluster'] = cluster
+                    # Note: We can't switch tabs programmatically in standard Streamlit easily, 
+                    # but the Ledger tab will be filtered on next click.
+                    st.toast(f"Filtered for {cluster} in {cycle}. Switch to Ledger!")
+
+    # --- TAB 2: DETAILS (AI Strategy Metrics) ---
+    with tabs[1]:
+        st.subheader("AI Discovery Statistics")
+        # Pure Domain DTOs converted to displayable DF
+        stats_df = pd.DataFrame([vars(c) for c in view.processed_categories])
+        
         if st.session_state['sel_cluster'] != "All Clusters":
-            ledger_df = ledger_df[ledger_df['master_cluster'].astype(str) == st.session_state['sel_cluster']]
+            stats_df = stats_df[stats_df['master_cluster'] == st.session_state['sel_cluster']]
             
-        st.metric("Total Sum", f"{ledger_df['amount'].sum():,.2f} €")
-        st.dataframe(ledger_df[['cycle', 'category', 'label', 'amount']], use_container_width=True, hide_index=True)
+        st.dataframe(stats_df, use_container_width=True, hide_index=True)
+
+    # --- TAB 3: LEDGER (Transaction Detail) ---
+    with tabs[2]:
+        st.subheader(f"Ledger: {st.session_state['sel_cycle']} | {st.session_state['sel_cluster']}")
+        
+        # Merge AI clusters with raw reporting data for the detailed view
+        raw_df = st.session_state['raw_data'].copy()
+        ai_map = pd.DataFrame([{'category': c.category, 'master_cluster': c.master_cluster} 
+                               for c in view.processed_categories])
+        ledger_df = raw_df.merge(ai_map, on='category', how='left')
+
+        # Apply Current Filters
+        if st.session_state['sel_cycle'] != "All Cycles":
+            ledger_df = ledger_df[ledger_df['cycle'] == st.session_state['sel_cycle']]
+        if st.session_state['sel_cluster'] != "All Clusters":
+            ledger_df = ledger_df[ledger_df['master_cluster'] == st.session_state['sel_cluster']]
+
+        # Summary Metric
+        current_sum = ledger_df['amount'].sum()
+        st.metric("Total in View", f"{current_sum:,.2f} €")
+
+        st.dataframe(
+            ledger_df[['cycle', 'master_cluster', 'category', 'label', 'amount']].sort_values('amount', ascending=False),
+            use_container_width=True,
+            hide_index=True
+        )
+
+# 5. Global Export
+if st.session_state.get('processed'):
+    st.divider()
+    if os.path.exists(OUTPUT_FILE):
+        with open(OUTPUT_FILE, "rb") as f:
+            st.download_button("📥 Download Final Analysis (Excel)", f, file_name="AI_Budget_Report.xlsx", use_container_width=True)

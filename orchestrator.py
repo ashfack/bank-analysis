@@ -7,7 +7,7 @@ from budgeter.budget_custom_overrider import SymbolicOverride
 from budgeter.strategy_registry import StrategyRegistry
 from categorizer.categorizer import Categorizer
 from config.config import ANCHOR_CATEGORY, BudgetStrategy
-from model.models import BudgetDomain, CategoryStats, ProcessedCategory, StrategyConfig
+from model.models import BudgetDomain, BudgetView, CategoryStats, ProcessedCategory, StrategyConfig
 
 
 class Orchestrator:
@@ -41,6 +41,34 @@ class Orchestrator:
                 'cycle': cycle_label
             })
         return enriched
+    
+    def run_analytics(self, strategy, config) -> BudgetView:
+        """
+        Executes the full pipeline, applies overrides, 
+        and builds a Pure Domain View.
+        """
+        # 1. Run Pipeline (This includes your _apply_global_overrides logic!)
+        final_categories = self.run_pipeline(strategy, config)
+        
+        # 2. Build the Matrix (Pure Python grouping)
+        matrix = defaultdict(lambda: defaultdict(float))
+        # Map category names to their AI-assigned clusters
+        cat_to_cluster = {c.category: c.master_cluster for c in final_categories}
+        
+        for item in self._enriched_data:
+            cluster = cat_to_cluster.get(item['category'], "Unmapped")
+            matrix[item['cycle']][cluster] += item['amount']
+            
+        # 3. Build the Cluster Budgets (Summing overrides)
+        cluster_budgets = defaultdict(float)
+        for c in final_categories:
+            cluster_budgets[c.master_cluster] += c.theoretical_budget
+            
+        return BudgetView(
+            matrix=dict(matrix),
+            cluster_budgets=dict(cluster_budgets),
+            processed_categories=final_categories
+        )
 
     def run_pipeline(self, strategy: BudgetStrategy, config: StrategyConfig) -> List[ProcessedCategory]:
         """Main entry point: Transform transactions to DTOs, then apply global rules."""
