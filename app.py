@@ -8,6 +8,21 @@ from orchestrator import Orchestrator
 from auto_tuner.strategy_auto_tuner import StrategyAutoTuner
 from report_generator.excel_architect import ExcelArchitect
 
+
+def get_budget_color(val: float, limit: float, cluster: str) -> str:
+    """Returns a HEX color string based on budget performance."""
+    if "0." in cluster or val == 0:
+        return "#548235" if val > 0 else "#FFFFFF"  # Dark Green or White
+    if val <= limit:
+        return "#50BE5B" if val > limit * 0.5 else "#548235"  # Light vs Dark Green
+    if val <= limit * 1.5:
+        return "#ED7D31"  # Orange
+    return "#C00000"  # Red
+
+def get_text_color(hex_color: str) -> str:
+    """Returns white text for dark backgrounds, black for light."""
+    return "white" if hex_color != "#FFFFFF" else "black"
+
 # 1. Page Configuration
 st.set_page_config(page_title="AI Financial Orchestrator", page_icon="📊", layout="wide")
 
@@ -76,7 +91,6 @@ if st.button("🚀 Synchronize & Optimize", use_container_width=True):
                 orch = Orchestrator(domain_data)
                 best_strat, best_params = StrategyAutoTuner.discover(orch)
                 
-                # REFACTOR: run_analytics returns the Pure Domain BudgetView
                 view = orch.run_analytics(best_strat, best_params)
                 architect = ExcelArchitect(OUTPUT_FILE)
                 architect.generate(view, orch.reporting_data)
@@ -120,18 +134,39 @@ if st.session_state.get('processed'):
         # Data Rows (Cycles)
         for cycle in cycles:
             row_cols = st.columns([1.5] + [1] * len(clusters))
-            row_cols[0].write(cycle)
+            row_cols[0].write(f"**{cycle}**")
+            
             for i, cluster in enumerate(clusters):
                 val = view.get_amount(cycle, cluster)
-                btn_label = f"{val:,.0f} €" if val > 0 else "—"
+                limit = view.get_budget(cluster)
                 
-                # DRILL-DOWN LOGIC: Button updates sidebar filters and triggers Ledger jump
-                if row_cols[i+1].button(btn_label, key=f"btn_{cycle}_{cluster}", use_container_width=True):
-                    st.session_state['sel_cycle'] = cycle
-                    st.session_state['sel_cluster'] = cluster
-                    # Note: We can't switch tabs programmatically in standard Streamlit easily, 
-                    # but the Ledger tab will be filtered on next click.
-                    st.toast(f"Filtered for {cluster} in {cycle}. Switch to Ledger!")
+                # Calculate colors based on your logic
+                bg_color = get_budget_color(val, limit, cluster)
+                txt_color = get_text_color(bg_color)
+                
+                # Create a styled container for the button
+                # This wraps the button in a colored div to mimic the Excel cell
+                with row_cols[i+1]:
+                    st.markdown(
+                        f"""
+                        <div style="
+                            background-color: {bg_color}; 
+                            padding: 5px; 
+                            border-radius: 5px; 
+                            text-align: center;
+                            border: 1px solid #ddd;
+                        ">
+                        """, 
+                        unsafe_allow_html=True
+                    )
+                    
+                    btn_label = f"{val:,.0f} €" if val > 0 else "—"
+                    if st.button(btn_label, key=f"btn_{cycle}_{cluster}", use_container_width=True):
+                        st.session_state['sel_cycle'] = cycle
+                        st.session_state['sel_cluster'] = cluster
+                        st.toast(f"Filtered for {cluster} in {cycle}. Switch to Ledger!")
+                    
+                    st.markdown("</div>", unsafe_allow_html=True)
 
     # --- TAB 2: DETAILS (AI Strategy Metrics) ---
     with tabs[1]:
