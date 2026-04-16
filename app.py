@@ -8,7 +8,7 @@ from orchestrator import Orchestrator
 from auto_tuner.strategy_auto_tuner import StrategyAutoTuner
 from report_generator.excel_architect import ExcelArchitect
 
-# --- 1. SHARED STYLING LOGIC (Synced with ExcelArchitect) ---
+# --- 1. SHARED STYLING LOGIC ---
 def get_budget_color(val: float, limit: float, cluster: str) -> str:
     if "0." in cluster or val == 0:
         return "#548235" if val > 0 else "#FFFFFF"  
@@ -32,21 +32,14 @@ if 'sel_cycle' not in st.session_state:
 if 'sel_cluster' not in st.session_state:
     st.session_state['sel_cluster'] = "All Clusters"
 if 'nav_index' not in st.session_state:
-    st.session_state['nav_index'] = 0  # 0: Pilotage, 1: Details, 2: Ledger
+    st.session_state['nav_index'] = 0 
 
-# --- 3. SIDEBAR: NAVIGATION & CONTROLS ---
+# --- 3. SIDEBAR: NAVIGATION ---
 with st.sidebar:
     st.title("🎯 Control Panel")
     
-    # NAVIGATION: Using index from session_state allows the buttons to "force" a page change
     nav_options = ["📑 Pilotage", "🔍 Details Discovery", "📝 Transaction Ledger"]
-    active_nav = st.radio(
-        "Navigation", 
-        nav_options, 
-        index=st.session_state['nav_index']
-    )
-    
-    # Update state if the user clicks the radio manually
+    active_nav = st.radio("Navigation", nav_options, index=st.session_state['nav_index'])
     st.session_state['nav_index'] = nav_options.index(active_nav)
 
     st.divider()
@@ -54,20 +47,13 @@ with st.sidebar:
     if st.session_state['processed']:
         st.header("Focus Filter")
         view = st.session_state['budget_view']
-        
         cycles_list = ["All Cycles"] + view.cycles
         clusters_list = ["All Clusters"] + view.clusters
         
-        st.session_state['sel_cycle'] = st.selectbox(
-            "Select Cycle:", 
-            cycles_list, 
-            index=cycles_list.index(st.session_state['sel_cycle']) if st.session_state['sel_cycle'] in cycles_list else 0
-        )
-        st.session_state['sel_cluster'] = st.selectbox(
-            "Select Cluster:", 
-            clusters_list, 
-            index=clusters_list.index(st.session_state['sel_cluster']) if st.session_state['sel_cluster'] in clusters_list else 0
-        )
+        st.session_state['sel_cycle'] = st.selectbox("Select Cycle:", cycles_list, 
+            index=cycles_list.index(st.session_state['sel_cycle']) if st.session_state['sel_cycle'] in cycles_list else 0)
+        st.session_state['sel_cluster'] = st.selectbox("Select Cluster:", clusters_list, 
+            index=clusters_list.index(st.session_state['sel_cluster']) if st.session_state['sel_cluster'] in clusters_list else 0)
 
     st.header("📂 Data Ingestion")
     bank_export = st.file_uploader("Operations (CSV)", type=['csv'])
@@ -80,11 +66,17 @@ with st.sidebar:
 
 st.title("📊 AI-Powered Financial Orchestrator")
 
-# --- 4. EXECUTION ENGINE ---
+# --- 4. EXECUTION ENGINE (Directory Fix Included) ---
 if st.button("🚀 Synchronize & Optimize", use_container_width=True):
     if bank_export and mapping_cfg and budget_cfg:
         try:
-            os.makedirs(os.path.dirname(INPUT_FILE), exist_ok=True)
+            # FIX: Ensure BOTH input and output directories exist
+            for target_file in [INPUT_FILE, OUTPUT_FILE]:
+                target_dir = os.path.dirname(target_file)
+                if target_dir and not os.path.exists(target_dir):
+                    os.makedirs(target_dir, exist_ok=True)
+
+            # Save uploaded files
             for path, file in {INPUT_FILE: bank_export, MAPPING_FILE: mapping_cfg, BUDGET_FILE: budget_cfg}.items():
                 with open(path, "wb") as f: f.write(file.getbuffer())
 
@@ -99,7 +91,6 @@ if st.button("🚀 Synchronize & Optimize", use_container_width=True):
                 
                 view = orch.run_analytics(best_strat, best_params)
                 
-                # Excel Architect initialization (Fixed to 1 arg)
                 architect = ExcelArchitect(OUTPUT_FILE)
                 architect.generate(view, orch.reporting_data)
                 
@@ -117,17 +108,14 @@ if st.session_state.get('processed'):
     # --- PAGE 1: PILOTAGE ---
     if active_nav == "📑 Pilotage":
         st.subheader("Master Cluster Time-Series")
-        
         clusters = view.clusters
         cycles = view.cycles
 
-        # Header
         h_cols = st.columns([1.5] + [1] * len(clusters))
         h_cols[0].write("**Cycle**")
         for idx, cluster in enumerate(clusters):
             h_cols[idx+1].markdown(f"<div style='text-align: center'><b>{cluster}</b></div>", unsafe_allow_html=True)
 
-        # Budget Row
         b_cols = st.columns([1.5] + [1] * len(clusters))
         b_cols[0].markdown("*:blue[BUDGET THEORIQUE]*")
         for idx, cluster in enumerate(clusters):
@@ -136,28 +124,22 @@ if st.session_state.get('processed'):
         
         st.divider()
 
-        # Data Rows
         for cycle in cycles:
             r_cols = st.columns([1.5] + [1] * len(clusters))
             r_cols[0].write(f"**{cycle}**")
-            
             for idx, cluster in enumerate(clusters):
                 val = view.get_amount(cycle, cluster)
                 limit = view.get_budget(cluster)
                 bg = get_budget_color(val, limit, cluster)
                 
                 with r_cols[idx+1]:
-                    # Using a simplified HTML wrapper that won't capture the click
                     st.markdown(f"""<div style="background-color: {bg}; border-radius: 4px; padding: 2px;">""", unsafe_allow_html=True)
-                    
                     label = f"{val:,.0f} €" if val > 0 else "—"
-                    # KEY is critical here to keep the buttons distinct
                     if st.button(label, key=f"btn_{cycle}_{cluster}", use_container_width=True):
                         st.session_state['sel_cycle'] = cycle
                         st.session_state['sel_cluster'] = cluster
-                        st.session_state['nav_index'] = 2  # This triggers the jump to Ledger
+                        st.session_state['nav_index'] = 2 
                         st.rerun()
-                    
                     st.markdown("</div>", unsafe_allow_html=True)
 
     # --- PAGE 2: DETAILS ---
@@ -171,7 +153,6 @@ if st.session_state.get('processed'):
     # --- PAGE 3: LEDGER ---
     elif active_nav == "📝 Transaction Ledger":
         st.subheader(f"Ledger: {st.session_state['sel_cycle']} | {st.session_state['sel_cluster']}")
-        
         raw_df = st.session_state['raw_data'].copy()
         ai_map = pd.DataFrame([{'category': c.category, 'master_cluster': c.master_cluster} for c in view.processed_categories])
         ledger_df = raw_df.merge(ai_map, on='category', how='left')
@@ -182,10 +163,8 @@ if st.session_state.get('processed'):
             ledger_df = ledger_df[ledger_df['master_cluster'] == st.session_state['sel_cluster']]
 
         st.metric("Total", f"{ledger_df['amount'].sum():,.2f} €")
-        st.dataframe(
-            ledger_df[['cycle', 'master_cluster', 'category', 'label', 'amount']].sort_values('amount', ascending=False),
-            use_container_width=True, hide_index=True
-        )
+        st.dataframe(ledger_df[['cycle', 'master_cluster', 'category', 'label', 'amount']].sort_values('amount', ascending=False),
+            use_container_width=True, hide_index=True)
 
 # --- 6. GLOBAL EXPORT ---
 if st.session_state.get('processed'):
