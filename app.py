@@ -1,7 +1,7 @@
 import streamlit as st
-import pandas as pd
 from analysis_runner import run_uploaded_analysis
 from dashboard import build_pilotage_table, style_pilotage_table
+from reporting.projections import build_category_table, build_ledger_table
 
 # --- 2. PAGE CONFIGURATION ---
 st.set_page_config(page_title="AI Financial Orchestrator", page_icon="📊", layout="wide")
@@ -60,9 +60,7 @@ if st.button("🚀 Synchronize & Optimize", width="stretch"):
                 )
 
                 st.session_state['budget_view'] = result.view
-                st.session_state['raw_data'] = pd.DataFrame(
-                    [vars(item) for item in result.reporting_data]
-                )
+                st.session_state['reporting_data'] = result.reporting_data
                 st.session_state['report_bytes'] = result.report_bytes
                 st.session_state['quality_report'] = result.quality
                 st.session_state['processed'] = True
@@ -136,7 +134,7 @@ if st.session_state.get('processed'):
     # --- PAGE 2: DETAILS ---
     elif active_nav == "🔍 Details Discovery":
         st.subheader("AI Strategy Metrics")
-        df = pd.DataFrame([vars(c) for c in view.processed_categories])
+        df = build_category_table(view)
         if st.session_state['sel_cluster'] != "All Clusters":
             df = df[df['master_cluster'] == st.session_state['sel_cluster']]
         st.dataframe(df, width="stretch", hide_index=True)
@@ -144,9 +142,7 @@ if st.session_state.get('processed'):
     # --- PAGE 3: LEDGER ---
     elif active_nav == "📝 Transaction Ledger":
         st.subheader(f"Ledger: {st.session_state['sel_cycle']} | {st.session_state['sel_cluster']}")
-        raw_df = st.session_state['raw_data'].copy()
-        ai_map = pd.DataFrame([{'category': c.category, 'master_cluster': c.master_cluster} for c in view.processed_categories])
-        ledger_df = raw_df.merge(ai_map, on='category', how='left')
+        ledger_df = build_ledger_table(view, st.session_state['reporting_data'])
 
         if st.session_state['sel_cycle'] != "All Cycles":
             ledger_df = ledger_df[ledger_df['cycle'] == st.session_state['sel_cycle']]

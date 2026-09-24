@@ -1,7 +1,11 @@
-import pandas as pd
 from streamlit.testing.v1 import AppTest
 
-from model.models import BudgetView, DataQualityReport, ProcessedCategory
+from model.models import (
+    BudgetView,
+    DataQualityReport,
+    EnrichedTransaction,
+    ProcessedCategory,
+)
 
 
 def _processed_app() -> AppTest:
@@ -28,17 +32,15 @@ def _processed_app() -> AppTest:
     app.session_state["sel_cluster"] = "All Clusters"
     app.session_state["nav_index"] = 0
     app.session_state["budget_view"] = view
-    app.session_state["raw_data"] = pd.DataFrame(
-        [
-            {
-                "category": "Food",
-                "amount": 10.0,
-                "raw_amount": -10.0,
-                "label": "Market",
-                "cycle": "Cycle_du_2026-01-01",
-            }
-        ]
-    )
+    app.session_state["reporting_data"] = [
+        EnrichedTransaction(
+            category="Food",
+            amount=10.0,
+            raw_amount=-10.0,
+            label="Market",
+            cycle="Cycle_du_2026-01-01",
+        )
+    ]
     app.session_state["report_bytes"] = b"synthetic workbook"
     app.session_state["quality_report"] = DataQualityReport(
         duplicate_transaction_count=2,

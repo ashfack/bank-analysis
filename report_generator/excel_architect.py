@@ -2,6 +2,7 @@ import pandas as pd
 from typing import Dict, Any, List
 from budgeter.budget_status import get_budget_status
 from model.models import BudgetView, EnrichedTransaction
+from reporting.projections import build_category_table, build_ledger_table
 
 class ExcelArchitect:
     def __init__(self, output_path: str):
@@ -17,9 +18,9 @@ class ExcelArchitect:
         """
         # 1. Prepare Dataframes
         pilotage_df = self._prepare_pilotage_df(view)
-        mapping_df = pd.DataFrame([vars(c) for c in view.processed_categories])
+        mapping_df = build_category_table(view)
         mapping_df = mapping_df.sort_values("master_cluster").reset_index(drop=True)
-        ledger_df = self._prepare_ledger_df(view, raw_transactions)
+        ledger_df = build_ledger_table(view, raw_transactions)
         ledger_df = ledger_df.sort_values(['cycle', 'master_cluster'], ascending=[False, True]).reset_index(drop=True)
 
         with pd.ExcelWriter(self.output_path, engine='xlsxwriter') as writer:
@@ -39,13 +40,6 @@ class ExcelArchitect:
                 row[cluster] = view.get_amount(cycle, cluster)
             data.append(row)
         return pd.DataFrame(data).set_index("cycle")
-
-    def _prepare_ledger_df(self, view: BudgetView, raw_transactions: List[EnrichedTransaction]) -> pd.DataFrame:
-        df = pd.DataFrame([vars(item) for item in raw_transactions])
-        # Ensure AI-discovered clusters are attached to the ledger
-        cat_map = {c.category: c.master_cluster for c in view.processed_categories}
-        df['master_cluster'] = df['category'].map(cat_map)
-        return df.sort_values(['cycle', 'master_cluster', 'amount'], ascending=[False, True, False])
 
     def _apply_advanced_styling(self, writer, view: BudgetView, pivot, mapping, ledger):
         wb = writer.book
