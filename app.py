@@ -1,12 +1,6 @@
 import streamlit as st
-import os
 import pandas as pd
-from config.config import BUDGET_FILE, INPUT_FILE, MAPPING_FILE, OUTPUT_FILE
-from loader.data_loader import DataLoader
-from model.models import BudgetDomain
-from orchestrator import Orchestrator
-from auto_tuner.strategy_auto_tuner import StrategyAutoTuner
-from report_generator.excel_architect import ExcelArchitect
+from analysis_runner import run_uploaded_analysis
 
 # --- 1. SHARED STYLING LOGIC ---
 def get_budget_color(val: float, limit: float, cluster: str) -> str:
@@ -74,36 +68,20 @@ with st.sidebar:
 
 st.title("📊 AI-Powered Financial Orchestrator")
 
-# --- 4. EXECUTION ENGINE (Directory Fix Included) ---
+# --- 4. EXECUTION ENGINE ---
 if st.button("🚀 Synchronize & Optimize", use_container_width=True):
     if bank_export and mapping_cfg and budget_cfg:
         try:
-            # FIX: Ensure BOTH input and output directories exist
-            for target_file in [INPUT_FILE, OUTPUT_FILE]:
-                target_dir = os.path.dirname(target_file)
-                if target_dir and not os.path.exists(target_dir):
-                    os.makedirs(target_dir, exist_ok=True)
-
-            # Save uploaded files
-            for path, file in {INPUT_FILE: bank_export, MAPPING_FILE: mapping_cfg, BUDGET_FILE: budget_cfg}.items():
-                with open(path, "wb") as f: f.write(file.getbuffer())
-
             with st.spinner("🧠 Orchestrating Domain Logic..."):
-                transactions = DataLoader.prepare_transaction_data(INPUT_FILE)
-                mapping = DataLoader.load_category_cluster_map(MAPPING_FILE)
-                overrides = DataLoader.load_budget_overrides(BUDGET_FILE)
-                domain_data = BudgetDomain(transactions, mapping, overrides)
-                
-                orch = Orchestrator(domain_data)
-                best_strat, best_params = StrategyAutoTuner.discover(orch)
-                
-                view = orch.run_analytics(best_strat, best_params)
-                
-                architect = ExcelArchitect(OUTPUT_FILE)
-                architect.generate(view, orch.reporting_data)
-                
-                st.session_state['budget_view'] = view
-                st.session_state['raw_data'] = pd.DataFrame(orch.reporting_data)
+                result = run_uploaded_analysis(
+                    bank_export.getvalue(),
+                    mapping_cfg.getvalue(),
+                    budget_cfg.getvalue(),
+                )
+
+                st.session_state['budget_view'] = result.view
+                st.session_state['raw_data'] = pd.DataFrame(result.reporting_data)
+                st.session_state['report_bytes'] = result.report_bytes
                 st.session_state['processed'] = True
                 st.rerun()
         except Exception as e:
@@ -177,6 +155,10 @@ if st.session_state.get('processed'):
 # --- 6. GLOBAL EXPORT ---
 if st.session_state.get('processed'):
     st.divider()
-    if os.path.exists(OUTPUT_FILE):
-        with open(OUTPUT_FILE, "rb") as f:
-            st.download_button("📥 Download Excel Report", f, file_name="AI_Budget_Report.xlsx", use_container_width=True)
+    st.download_button(
+        "📥 Download Excel Report",
+        st.session_state['report_bytes'],
+        file_name="AI_Budget_Report.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True,
+    )
