@@ -1,6 +1,6 @@
 import streamlit as st
 
-from analysis_runner import AnalysisResult
+from application.analysis_service import AnalysisResult
 
 
 def initialize_session_state() -> None:
