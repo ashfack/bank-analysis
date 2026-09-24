@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from streamlit.testing.v1 import AppTest
 
 from model.models import (
@@ -6,6 +8,9 @@ from model.models import (
     EnrichedTransaction,
     ProcessedCategory,
 )
+
+
+APP_PATH = Path(__file__).resolve().parents[1] / "app.py"
 
 
 def _processed_app() -> AppTest:
@@ -26,7 +31,7 @@ def _processed_app() -> AppTest:
             )
         ],
     )
-    app = AppTest.from_file("app.py")
+    app = AppTest.from_file(APP_PATH)
     app.session_state["processed"] = True
     app.session_state["sel_cycle"] = "All Cycles"
     app.session_state["sel_cluster"] = "All Clusters"
