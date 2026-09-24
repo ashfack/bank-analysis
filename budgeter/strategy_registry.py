@@ -46,6 +46,6 @@ class StrategyRegistry:
             result = stats.median * (1.0 + impact_factor)
             
         else:
-            result = stats.median
+            raise ValueError(f"Unsupported budget strategy: {strategy!r}")
 
         return round(float(result), 2)

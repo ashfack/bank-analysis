@@ -77,9 +77,9 @@ class TestStrategyRegistry:
         # Should return median rounded
         assert StrategyRegistry.compute_atomic(BudgetStrategy.PERCENTILE_GUARDRAIL, [], stats) == 100.0
 
-    def test_unhandled_strategy_fallback(self, cycle_data, stats):
-        # Hits the 'else' branch
-        assert StrategyRegistry.compute_atomic(BudgetStrategy.VOLATILITY_SHOCK_P90, cycle_data, stats) == 100.0
+    def test_unhandled_strategy_is_rejected(self, cycle_data, stats):
+        with pytest.raises(ValueError, match="Unsupported budget strategy"):
+            StrategyRegistry.compute_atomic(object(), cycle_data, stats)
 
     def test_strict_rounding(self, stats):
         # 100 + (0.3333333 * 20) = 106.6666... -> 106.67

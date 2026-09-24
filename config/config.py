@@ -18,8 +18,6 @@ class BudgetStrategy(Enum):
     HISTOGRAM_MODE = auto()
     VARIANCE_BUFFER = auto()
     HYBRID_VOLATILITY = auto()
-    VOLATILITY_SHOCK_P90 = auto()
-    PORTFOLIO_DYNAMICS = auto()
 
 
 # --- CLASSIFICATION THRESHOLDS ---
