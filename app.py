@@ -1,164 +1,56 @@
 import streamlit as st
+
 from analysis_runner import run_uploaded_analysis
-from dashboard import build_pilotage_table, style_pilotage_table
-from reporting.projections import build_category_table, build_ledger_table
+from presentation.pages import render_active_page
+from presentation.quality_panel import render_quality_panel
+from presentation.session_state import initialize_session_state, store_analysis_result
+from presentation.sidebar import render_sidebar
 
-# --- 2. PAGE CONFIGURATION ---
-st.set_page_config(page_title="AI Financial Orchestrator", page_icon="📊", layout="wide")
 
-# Initialize Session State
-if 'processed' not in st.session_state:
-    st.session_state['processed'] = False
-if 'sel_cycle' not in st.session_state:
-    st.session_state['sel_cycle'] = "All Cycles"
-if 'sel_cluster' not in st.session_state:
-    st.session_state['sel_cluster'] = "All Clusters"
-if 'nav_index' not in st.session_state:
-    st.session_state['nav_index'] = 0 
-
-# --- 3. SIDEBAR: NAVIGATION ---
-with st.sidebar:
-    st.title("🎯 Control Panel")
-    
-    nav_options = ["📑 Pilotage", "🔍 Details Discovery", "📝 Transaction Ledger"]
-    active_nav = st.radio("Navigation", nav_options, index=st.session_state['nav_index'])
-    st.session_state['nav_index'] = nav_options.index(active_nav)
-
-    st.divider()
-
-    if st.session_state['processed']:
-        st.header("Focus Filter")
-        view = st.session_state['budget_view']
-        cycles_list = ["All Cycles"] + view.cycles
-        clusters_list = ["All Clusters"] + view.clusters
-        
-        st.session_state['sel_cycle'] = st.selectbox("Select Cycle:", cycles_list, 
-            index=cycles_list.index(st.session_state['sel_cycle']) if st.session_state['sel_cycle'] in cycles_list else 0)
-        st.session_state['sel_cluster'] = st.selectbox("Select Cluster:", clusters_list, 
-            index=clusters_list.index(st.session_state['sel_cluster']) if st.session_state['sel_cluster'] in clusters_list else 0)
-
-    st.header("📂 Data Ingestion")
-    bank_export = st.file_uploader("Operations (CSV)", type=['csv'])
-    mapping_cfg = st.file_uploader("Mapping (CSV)", type=['csv'])
-    budget_cfg = st.file_uploader("Budget (CSV)", type=['csv'])
-    
-    if st.button("🗑️ Reset Application"):
-        st.session_state.clear()
-        st.rerun()
+st.set_page_config(
+    page_title="AI Financial Orchestrator",
+    page_icon="📊",
+    layout="wide",
+)
+initialize_session_state()
+sidebar = render_sidebar()
 
 st.title("📊 AI-Powered Financial Orchestrator")
 
-# --- 4. EXECUTION ENGINE ---
 if st.button("🚀 Synchronize & Optimize", width="stretch"):
-    if bank_export and mapping_cfg and budget_cfg:
+    uploads = (
+        sidebar.bank_export,
+        sidebar.mapping_config,
+        sidebar.budget_config,
+    )
+    if all(uploads):
         try:
             with st.spinner("🧠 Orchestrating Domain Logic..."):
                 result = run_uploaded_analysis(
-                    bank_export.getvalue(),
-                    mapping_cfg.getvalue(),
-                    budget_cfg.getvalue(),
+                    sidebar.bank_export.getvalue(),
+                    sidebar.mapping_config.getvalue(),
+                    sidebar.budget_config.getvalue(),
                 )
-
-                st.session_state['budget_view'] = result.view
-                st.session_state['reporting_data'] = result.reporting_data
-                st.session_state['report_bytes'] = result.report_bytes
-                st.session_state['quality_report'] = result.quality
-                st.session_state['processed'] = True
+                store_analysis_result(result)
                 st.rerun()
-        except Exception as e:
-            st.error(f"Orchestration Error: {e}")
+        except Exception as error:
+            st.error(f"Orchestration Error: {error}")
 
-# --- 5. DASHBOARD VIEW ADAPTER ---
-if st.session_state.get('processed'):
-    view = st.session_state['budget_view']
+if st.session_state.get("processed"):
+    view = st.session_state["budget_view"]
+    quality = st.session_state.get("quality_report")
+    if quality:
+        render_quality_panel(quality)
+    render_active_page(
+        sidebar.active_navigation,
+        view,
+        st.session_state["reporting_data"],
+    )
 
-    quality = st.session_state.get('quality_report')
-    if quality and quality.alert_count:
-        with st.expander(
-            f"⚠️ Qualité des données — {quality.alert_count} point(s) à vérifier"
-        ):
-            if quality.duplicate_transaction_count:
-                st.warning(
-                    f"{quality.duplicate_transaction_count} ligne(s) d'opération strictement "
-                    "identique(s) ont été détectée(s). Elles restent incluses "
-                    "dans les calculs."
-                )
-            if quality.auto_classified_categories:
-                st.warning(
-                    f"{len(quality.auto_classified_categories)} catégorie(s) sans mapping manuel "
-                    "ont été classées automatiquement."
-                )
-                st.write(", ".join(quality.auto_classified_categories))
-            if quality.unused_budget_targets:
-                st.warning(
-                    f"{len(quality.unused_budget_targets)} entrée(s) de budget ne "
-                    "correspondent à aucune catégorie ni aucun cluster et "
-                    "n'ont donc aucun effet."
-                )
-                st.write(", ".join(quality.unused_budget_targets))
-    
-    # --- PAGE 1: PILOTAGE ---
-    if active_nav == "📑 Pilotage":
-        st.subheader("Master Cluster Time-Series")
-        st.caption("Sélectionnez une cellule de dépense pour ouvrir les opérations correspondantes.")
-        pilotage_table = build_pilotage_table(view)
-        column_config = {
-            "Cycle": st.column_config.TextColumn("Cycle", width="medium"),
-            **{
-                cluster: st.column_config.NumberColumn(cluster, format="%.0f €", width="small")
-                for cluster in view.clusters
-            },
-        }
-        pilotage_event = st.dataframe(
-            style_pilotage_table(pilotage_table, view),
-            width="stretch",
-            height=720,
-            hide_index=True,
-            column_config=column_config,
-            key="pilotage_table",
-            on_select="rerun",
-            selection_mode="single-cell",
-            placeholder="—",
-        )
-
-        if pilotage_event.selection.cells:
-            row_index, cluster = pilotage_event.selection.cells[0]
-            if row_index > 0 and cluster != "Cycle":
-                cycle = pilotage_table.iloc[row_index]["Cycle"]
-                if view.get_amount(cycle, cluster) > 0:
-                    st.session_state['sel_cycle'] = cycle
-                    st.session_state['sel_cluster'] = cluster
-                    st.session_state['nav_index'] = 2
-                    st.rerun()
-
-    # --- PAGE 2: DETAILS ---
-    elif active_nav == "🔍 Details Discovery":
-        st.subheader("AI Strategy Metrics")
-        df = build_category_table(view)
-        if st.session_state['sel_cluster'] != "All Clusters":
-            df = df[df['master_cluster'] == st.session_state['sel_cluster']]
-        st.dataframe(df, width="stretch", hide_index=True)
-
-    # --- PAGE 3: LEDGER ---
-    elif active_nav == "📝 Transaction Ledger":
-        st.subheader(f"Ledger: {st.session_state['sel_cycle']} | {st.session_state['sel_cluster']}")
-        ledger_df = build_ledger_table(view, st.session_state['reporting_data'])
-
-        if st.session_state['sel_cycle'] != "All Cycles":
-            ledger_df = ledger_df[ledger_df['cycle'] == st.session_state['sel_cycle']]
-        if st.session_state['sel_cluster'] != "All Clusters":
-            ledger_df = ledger_df[ledger_df['master_cluster'] == st.session_state['sel_cluster']]
-
-        st.metric("Total", f"{ledger_df['amount'].sum():,.2f} €")
-        st.dataframe(ledger_df[['cycle', 'master_cluster', 'category', 'label', 'amount']].sort_values('amount', ascending=False),
-            width="stretch", hide_index=True)
-
-# --- 6. GLOBAL EXPORT ---
-if st.session_state.get('processed'):
     st.divider()
     st.download_button(
         "📥 Download Excel Report",
-        st.session_state['report_bytes'],
+        st.session_state["report_bytes"],
         file_name="AI_Budget_Report.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         width="stretch",
