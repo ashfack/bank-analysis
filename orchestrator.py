@@ -7,6 +7,7 @@ from budgeter.budget_custom_overrider import SymbolicOverride
 from budgeter.strategy_registry import StrategyRegistry
 from categorizer.categorizer import Categorizer
 from config.config import ANCHOR_CATEGORY, BudgetStrategy
+from domain.cycle_assigner import CycleAssigner
 from model.models import (
     BudgetDomain,
     BudgetView,
@@ -23,7 +24,7 @@ class Orchestrator:
         self.transactions = domain.transactions
         self.overrides = domain.budget_overrides
         self.categorizer = Categorizer(domain.category_cluster_map)
-        self._enriched_data = self._define_cycles()
+        self._enriched_data = CycleAssigner(ANCHOR_CATEGORY).assign(self.transactions)
 
     @property
     def reporting_data(self) -> List[EnrichedTransaction]:
@@ -141,20 +142,3 @@ class Orchestrator:
         mean = sum(history) / n
         std = math.sqrt(sum((x - mean)**2 for x in history) / n)
         return CategoryStats(float(median), float(std), n, float(n/total_cycles) if total_cycles else 0.0)
-
-    def _define_cycles(self) -> List[EnrichedTransaction]:
-        pay_dates = sorted({t.dateOperation for t in self.transactions if t.category == ANCHOR_CATEGORY})
-        enriched = []
-        for t in self.transactions:
-            past = [p for p in pay_dates if p <= t.dateOperation]
-            lbl = f"Cycle_du_{max(past).strftime('%Y-%m-%d')}" if past else "Initial"
-            enriched.append(
-                EnrichedTransaction(
-                    category=t.category,
-                    amount=abs(t.amount),
-                    raw_amount=t.amount,
-                    label=t.label,
-                    cycle=lbl,
-                )
-            )
-        return enriched
