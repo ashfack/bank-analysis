@@ -30,13 +30,17 @@ An automated financial orchestration engine that transforms raw banking transact
 
 ## 🏗️ Architecture & Flow
 
-The system follows a modular design to ensure high maintainability and testability:
+The code is organized around explicit responsibilities and inward-facing dependencies:
 
-1.  **Loader**: Ingests raw CSV/Excel data into standardized `Transaction` models.
-2.  **Categorizer**: Applies mapping logic to assign transactions to clusters.
-3.  **Budgeter**: Calculates limits and applies symbolic overrides.
-4.  **Orchestrator**: The central "brain" coordinating data flow between modules.
-5.  **Excel Architect**: The reporting engine utilizing `xlsxwriter` for advanced formatting and internal linking.
+1. **Presentation**: Streamlit composition, sidebar, session state and page rendering.
+2. **Application**: `AnalysisService` coordinates one analysis through injected ports.
+3. **Domain**: Cycle assignment, category analysis, budget allocation and view construction.
+4. **Infrastructure**: Specialized CSV readers and the in-memory Excel report writer.
+5. **Reporting**: Shared presentation-neutral table projections used by Streamlit and Excel.
+
+Uploaded files and generated workbooks are processed in memory. The application does not
+depend on a shared input directory or a persistent `/tmp` workspace, which keeps concurrent
+Hugging Face sessions isolated.
 
 ---
 
@@ -45,7 +49,7 @@ The system follows a modular design to ensure high maintainability and testabili
 This project maintains a professional standard of code quality with **95%+ coverage** on core logic files.
 
 ### Running Tests
-To execute the full test suite (57+ tests):
+To execute the full test suite (85 tests):
 ```bash
 pytest tests/
 ```
@@ -97,7 +101,7 @@ The output file will be generated at the path specified in your config.py.
 
 - Testing Framework: Pytest, Pytest-Cov
 
-- Typing: Strict Mypy-compliant type hinting
+- Contracts: Typed immutable dataclasses and protocol-based application ports
 
 
 
