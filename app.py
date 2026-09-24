@@ -81,29 +81,39 @@ if st.session_state.get('processed'):
     view = st.session_state['budget_view']
 
     duplicate_count = st.session_state.get('duplicate_transaction_count', 0)
-    if duplicate_count:
-        st.warning(
-            f"Qualité des données : {duplicate_count} ligne(s) d'opération "
-            "strictement identique(s) ont été détectée(s). Elles restent "
-            "incluses dans les calculs."
-        )
-
     auto_classified = st.session_state.get('auto_classified_categories', ())
-    if auto_classified:
-        st.warning(
-            "Qualité des données : "
-            f"{len(auto_classified)} catégorie(s) sans mapping manuel ont été "
-            "classées automatiquement : " + ", ".join(auto_classified)
-        )
-
     unused_budget_targets = st.session_state.get('unused_budget_targets', ())
-    if unused_budget_targets:
-        st.warning(
-            "Qualité des données : "
-            f"{len(unused_budget_targets)} entrée(s) de budget ne correspondent "
-            "à aucune catégorie ni aucun cluster et n'ont donc aucun effet : "
-            + ", ".join(unused_budget_targets)
+    quality_alert_count = sum(
+        bool(value)
+        for value in (
+            duplicate_count,
+            auto_classified,
+            unused_budget_targets,
         )
+    )
+    if quality_alert_count:
+        with st.expander(
+            f"⚠️ Qualité des données — {quality_alert_count} point(s) à vérifier"
+        ):
+            if duplicate_count:
+                st.warning(
+                    f"{duplicate_count} ligne(s) d'opération strictement "
+                    "identique(s) ont été détectée(s). Elles restent incluses "
+                    "dans les calculs."
+                )
+            if auto_classified:
+                st.warning(
+                    f"{len(auto_classified)} catégorie(s) sans mapping manuel "
+                    "ont été classées automatiquement."
+                )
+                st.write(", ".join(auto_classified))
+            if unused_budget_targets:
+                st.warning(
+                    f"{len(unused_budget_targets)} entrée(s) de budget ne "
+                    "correspondent à aucune catégorie ni aucun cluster et "
+                    "n'ont donc aucun effet."
+                )
+                st.write(", ".join(unused_budget_targets))
     
     # --- PAGE 1: PILOTAGE ---
     if active_nav == "📑 Pilotage":
