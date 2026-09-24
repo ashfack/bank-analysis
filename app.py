@@ -79,7 +79,7 @@ if st.session_state.get('processed'):
         column_config = {
             "Cycle": st.column_config.TextColumn("Cycle", width="medium"),
             **{
-                cluster: st.column_config.NumberColumn(cluster, format="%.0f €", width="medium")
+                cluster: st.column_config.NumberColumn(cluster, format="%.0f €", width="small")
                 for cluster in view.clusters
             },
         }
