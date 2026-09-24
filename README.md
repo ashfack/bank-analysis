@@ -11,6 +11,8 @@ short_description: Interactive budget analysis and Excel report generation
 
 # Bank Analysis
 
+[![Tests](https://github.com/ashfack/bank-analysis/actions/workflows/tests.yml/badge.svg)](https://github.com/ashfack/bank-analysis/actions/workflows/tests.yml)
+
 Bank Analysis turns three CSV files—bank transactions, category mappings, and budget
 rules—into an interactive Streamlit dashboard and a navigable Excel report.
 
@@ -43,6 +45,12 @@ drill down from aggregated amounts to the underlying transactions.
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+Contributors who need to run the test suite should install the development dependencies:
+
+```bash
+pip install -r requirements-dev.txt
 ```
 
 ### Streamlit Application
@@ -231,6 +239,11 @@ For the Streamlit upload path:
 
 The Dockerfile runs the complete test suite during the image build. A failing test prevents
 the Space image from being deployed.
+
+GitHub Actions runs the same suite on Python 3.12 for every push and pull request targeting
+`main`. It also enforces a minimum overall coverage of 95%. Streamlit Community Cloud uses
+only `requirements.txt`, while local development, CI, and the Docker build use
+`requirements-dev.txt`.
 
 Personal banking exports must not be committed. `input/export-operations.csv` is excluded
 from Git.
