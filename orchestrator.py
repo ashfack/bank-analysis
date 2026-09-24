@@ -12,6 +12,7 @@ from model.models import BudgetDomain, BudgetView, CategoryStats, ProcessedCateg
 
 class Orchestrator:
     def __init__(self, domain: BudgetDomain):
+        self.domain = domain
         self.transactions = domain.transactions
         self.overrides = domain.budget_overrides
         self.categorizer = Categorizer(domain.category_cluster_map)

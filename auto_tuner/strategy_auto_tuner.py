@@ -1,9 +1,10 @@
 import itertools
+import math
 from typing import Tuple, List, Dict
 from collections import defaultdict
 
 from config.config import ACTIVE_STRATEGY, MANUAL_MODE, MANUAL_PARAMS, BudgetStrategy
-from model.models import StrategyConfig, ProcessedCategory
+from model.models import BudgetDomain, StrategyConfig, ProcessedCategory
 # Note: Using Type Hinting for Orchestrator to avoid circular imports if necessary
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -16,22 +17,17 @@ class StrategyAutoTuner:
     def discover(orchestrator: "Orchestrator") -> Tuple[BudgetStrategy, StrategyConfig]:
         if MANUAL_MODE: 
             return ACTIVE_STRATEGY, MANUAL_PARAMS
-        
-        # 1. Prepare historical ground truth (Category -> Cycle -> Amount)
-        # We extract this once to avoid re-calculating it in every loop
-        cycle_history = defaultdict(list)
-        cat_cycle_map = defaultdict(lambda: defaultdict(float))
-        
-        for item in orchestrator._enriched_data:
-            cat_cycle_map[item['category']][item['cycle']] += item['amount']
-            
-        for cat, cycles in cat_cycle_map.items():
-            cycle_history[cat] = list(cycles.items()) # List of (cycle_label, amount)
+
+        training_orchestrator, cycle_history = StrategyAutoTuner._prepare_temporal_validation(orchestrator)
+
+        # Historical ground truth contains only cycles after the training window.
+        # For very short histories, _prepare_temporal_validation explicitly falls
+        # back to the original behavior because no honest holdout is possible.
 
         best_score = -float('inf')
         best_strat = BudgetStrategy.HYBRID_VOLATILITY
         best_config = StrategyConfig()
-        
+
         # Grid definition
         grid = {'p': [75, 85], 'k': [1.05, 1.2], 'sigma_mult': [0.8, 1.0]}
         keys = list(grid.keys())
@@ -53,10 +49,7 @@ class StrategyAutoTuner:
                     histogram_bins=params.get('bins', 10)
                 )
                 
-                # Run the simulation through the Orchestrator
-                # Note: orchestrator.run_pipeline now returns List[ProcessedCategory]
-                test_results = orchestrator.run_pipeline(strat, current_config)
-                
+                test_results = training_orchestrator.run_pipeline(strat, current_config)
                 score = StrategyAutoTuner.evaluate(cycle_history, test_results)
                 
                 if score > strat_best_score:
@@ -72,6 +65,54 @@ class StrategyAutoTuner:
         
         print("="*85 + f"\nOVERALL WINNER: {best_strat.name} | {best_config}\n" + "="*85)
         return best_strat, best_config
+
+    @staticmethod
+    def _prepare_temporal_validation(
+        orchestrator: "Orchestrator",
+    ) -> Tuple["Orchestrator", Dict[str, List[Tuple[str, float]]]]:
+        """Fit on earlier cycles and reserve the most recent 20% for scoring."""
+        cycle_names = sorted({
+            item['cycle']
+            for item in orchestrator.reporting_data
+            if item['cycle'] != "Initial"
+        })
+
+        if len(cycle_names) < 2:
+            return orchestrator, StrategyAutoTuner._build_cycle_history(orchestrator.reporting_data)
+
+        holdout_size = max(1, math.ceil(len(cycle_names) * 0.2))
+        validation_cycles = set(cycle_names[-holdout_size:])
+        training_transactions = [
+            transaction
+            for transaction, item in zip(orchestrator.transactions, orchestrator.reporting_data)
+            if item['cycle'] not in validation_cycles
+        ]
+        validation_data = [
+            item
+            for item in orchestrator.reporting_data
+            if item['cycle'] in validation_cycles
+        ]
+
+        training_domain = BudgetDomain(
+            transactions=training_transactions,
+            category_cluster_map=orchestrator.domain.category_cluster_map,
+            budget_overrides=orchestrator.domain.budget_overrides,
+        )
+        training_orchestrator = orchestrator.__class__(training_domain)
+        return training_orchestrator, StrategyAutoTuner._build_cycle_history(validation_data)
+
+    @staticmethod
+    def _build_cycle_history(reporting_data) -> Dict[str, List[Tuple[str, float]]]:
+        cycle_history = defaultdict(list)
+        cat_cycle_map = defaultdict(lambda: defaultdict(float))
+
+        for item in reporting_data:
+            cat_cycle_map[item['category']][item['cycle']] += item['amount']
+
+        for cat, cycles in cat_cycle_map.items():
+            cycle_history[cat] = list(cycles.items())
+
+        return dict(cycle_history)
 
     @staticmethod
     def evaluate(cycle_history: Dict[str, List[Tuple[str, float]]], processed_results: List[ProcessedCategory]) -> float:
