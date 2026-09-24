@@ -178,7 +178,7 @@ class TestOrchestratorCoverage:
         domain = BudgetDomain([], {}, {})
         orch = Orchestrator(domain)
         # We call the private math method directly to force the 0.0 branch
-        freq = orch._calculate_stats([10.0, 20.0], total_cycles=0).frequency
+        freq = orch.category_analyzer.calculate_stats([10.0, 20.0], total_cycles=0).frequency
         assert freq == 0.0
 
     def test_coverage_shadows(self, multi_cycle_domain):
@@ -187,13 +187,13 @@ class TestOrchestratorCoverage:
 
         # 1. Force the 'else 0.0' frequency fallback in _calculate_stats
         # We call the private method directly to hit the division-by-zero guard
-        stats = orch._calculate_stats([100.0, 200.0], total_cycles=0)
+        stats = orch.category_analyzer.calculate_stats([100.0, 200.0], total_cycles=0)
         assert stats.frequency == 0.0
 
         # 2. Force the 'if not members' guard in _update_cluster
         # We try to update a cluster that exists in overrides but has NO categories
         results = orch.run_pipeline(BudgetStrategy.HYBRID_VOLATILITY, StrategyConfig())
-        updated = orch._update_cluster(results, "NonExistentCluster", "500")
+        updated = orch.budget_allocator.update_cluster(results, "NonExistentCluster", "500")
         assert updated == results  # Should return immediately without changing anything
 
         # 3. Force the 'm_sum > 0' else branch in _calculate_distribution
@@ -202,7 +202,7 @@ class TestOrchestratorCoverage:
         zero_item = ProcessedCategory(
             "ZeroCat", "ZeroClus", 0.0, 0.0, 1, 1.0, 0.0, 0.0, 0.0
         )
-        dist = orch._calculate_distribution([zero_item], "100")
+        dist = orch.budget_allocator.calculate_distribution([zero_item], "100")
         # Should distribute the 100 equally because m_sum is 0
         assert dist == [100.0]
 
@@ -233,11 +233,11 @@ class TestOrchestratorCoverage:
             "Zero", "Ghost", 0.0, 0.0, 1, 1.0, 0.0, 0.0, 0.0
         )
         # This forces the (float(rule) / len(members)) path
-        dist = orch._calculate_distribution([zero_member], "100")
+        dist = orch.budget_allocator.calculate_distribution([zero_member], "100")
         assert dist == [100.0]
 
         # 3. Hit the 'total_cycles else 0.0' fallback in _calculate_stats
-        stats = orch._calculate_stats([10.0], total_cycles=0)
+        stats = orch.category_analyzer.calculate_stats([10.0], total_cycles=0)
         assert stats.frequency == 0.0
 
     def test_kill_final_seven_lines(self):
@@ -256,7 +256,7 @@ class TestOrchestratorCoverage:
 
         # 1. Trigger: total_cycles = 0 fallback
         # We call the internal method directly because run_pipeline always has >= 1 cycle
-        stats = orch._calculate_stats([10.0], total_cycles=0)
+        stats = orch.category_analyzer.calculate_stats([10.0], total_cycles=0)
         assert stats.frequency == 0.0
 
         # 2. Trigger: The cluster overrides logic
