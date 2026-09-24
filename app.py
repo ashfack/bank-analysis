@@ -10,8 +10,16 @@ from report_generator.excel_architect import ExcelArchitect
 
 # --- 1. SHARED STYLING LOGIC ---
 def get_budget_color(val: float, limit: float, cluster: str) -> str:
-    if "0." in cluster or val == 0:
-        return "#548235" if val > 0 else "#FFFFFF"  
+    # Use .startswith() to avoid matching "10." or "20."
+    is_income_or_internal = cluster.startswith("0.")
+    
+    if val == 0:
+        return "#FFFFFF"
+        
+    if is_income_or_internal:
+        return "#548235" # Always green for income/internal if > 0
+    
+    # Standard budget logic for expense clusters (1, 2, 3...)
     if val <= limit:
         return "#50BE5B" if val > limit * 0.5 else "#548235"  
     if val <= limit * 1.5:
