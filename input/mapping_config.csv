@@ -8,6 +8,7 @@ Remboursements frais de santé;0. Incoming
 Virements émis de comptes à comptes;0. Internal
 Virements reçus de comptes à comptes;0. Internal
 Téléphonie (fixe et mobile);1. Core
+Complémentaires santé;1. Core
 Energie (électricité, gaz, fuel, chauffage…);1. Core
 Alimentation;2. Food
 Restaurants, bars, discothèques…;3. Restaurant
@@ -17,3 +18,4 @@ Assurance habitation et RC;7. Home and car insurance
 Assurances (Auto/Moto);7. Home and car insurance
 Dons et Cadeaux;8. Gifts
 Retraits cash;9. Cash
+Carburant;10. Carburant
