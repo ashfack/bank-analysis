@@ -54,24 +54,6 @@ class CategoryStats:
 
 
 @dataclass(frozen=True)
-class BudgetResult:
-    """
-    The final output structure for a budgeted category.
-
-    Attributes:
-        category: The name of the category.
-        master_cluster: The assigned cluster label.
-        base_limit: The initial limit calculated by the strategy.
-        theoretical_budget: The final limit after overrides and caps.
-        actual_spending: The total absolute amount spent in the period.
-    """
-    category: str
-    master_cluster: ClusterLabel
-    base_limit: float
-    theoretical_budget: float
-    actual_spending: float
-
-@dataclass(frozen=True)
 class StrategyConfig:
     """
     Explicit configuration for budget calculation strategies.

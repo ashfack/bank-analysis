@@ -20,8 +20,6 @@ if __name__ == "__main__":
     # Run discovery with the new Leaderboard printout
     best_strat, best_params = StrategyAutoTuner.discover(orch)
     
-    final_stats = orch.run_pipeline(best_strat, best_params)
-
     view = orch.run_analytics(best_strat, best_params)
     architect = ExcelArchitect(OUTPUT_FILE)
     architect.generate(view, orch.reporting_data)
