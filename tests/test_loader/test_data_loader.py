@@ -82,6 +82,16 @@ class TestDataLoader:
         mapping = DataLoader.load_category_cluster_map(str(path))
         assert mapping == {"Rent": "Fixed", "Food": "Lifestyle"}
 
+    def test_load_category_cluster_map_rejects_duplicates(self, tmp_path):
+        path = tmp_path / "duplicate-map.csv"
+        path.write_text(
+            "category;cluster\nTransfer;0. Incoming\nTransfer;0. Internal",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match="Duplicate category mappings: Transfer"):
+            DataLoader.load_category_cluster_map(str(path))
+
     def test_load_budget_overrides_with_comments(self, tmp_path, override_content):
         """Ensures the parser ignores # comments and empty lines."""
         path = tmp_path / "overrides.csv"

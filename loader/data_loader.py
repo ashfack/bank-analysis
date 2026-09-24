@@ -18,6 +18,13 @@ class DataLoader:
         
         # Use constants to zip the mapping
         if COL_RAW_CATEGORY in df.columns and COL_RAW_CLUSTER in df.columns:
+            duplicated_categories = df.loc[
+                df[COL_RAW_CATEGORY].duplicated(keep=False),
+                COL_RAW_CATEGORY,
+            ].dropna().astype(str).unique()
+            if duplicated_categories.size:
+                duplicates = ", ".join(sorted(duplicated_categories))
+                raise ValueError(f"Duplicate category mappings: {duplicates}")
             return dict(zip(df[COL_RAW_CATEGORY], df[COL_RAW_CLUSTER]))
         return {}
     
@@ -81,5 +88,3 @@ class DataLoader:
         
         # Sort by date before returning
         return sorted(transactions, key=lambda x: x.dateOperation)
-
-    
