@@ -65,6 +65,12 @@ if st.button("🚀 Synchronize & Optimize", width="stretch"):
                 st.session_state['duplicate_transaction_count'] = (
                     result.duplicate_transaction_count
                 )
+                st.session_state['auto_classified_categories'] = (
+                    result.auto_classified_categories
+                )
+                st.session_state['unused_budget_targets'] = (
+                    result.unused_budget_targets
+                )
                 st.session_state['processed'] = True
                 st.rerun()
         except Exception as e:
@@ -80,6 +86,23 @@ if st.session_state.get('processed'):
             f"Qualité des données : {duplicate_count} ligne(s) d'opération "
             "strictement identique(s) ont été détectée(s). Elles restent "
             "incluses dans les calculs."
+        )
+
+    auto_classified = st.session_state.get('auto_classified_categories', ())
+    if auto_classified:
+        st.warning(
+            "Qualité des données : "
+            f"{len(auto_classified)} catégorie(s) sans mapping manuel ont été "
+            "classées automatiquement : " + ", ".join(auto_classified)
+        )
+
+    unused_budget_targets = st.session_state.get('unused_budget_targets', ())
+    if unused_budget_targets:
+        st.warning(
+            "Qualité des données : "
+            f"{len(unused_budget_targets)} entrée(s) de budget ne correspondent "
+            "à aucune catégorie ni aucun cluster et n'ont donc aucun effet : "
+            + ", ".join(unused_budget_targets)
         )
     
     # --- PAGE 1: PILOTAGE ---

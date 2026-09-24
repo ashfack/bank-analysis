@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from auto_tuner.strategy_auto_tuner import StrategyAutoTuner
 from loader.data_loader import DataLoader
@@ -16,6 +16,8 @@ class AnalysisResult:
     reporting_data: List[Dict[str, Any]]
     report_bytes: bytes
     duplicate_transaction_count: int
+    auto_classified_categories: Tuple[str, ...]
+    unused_budget_targets: Tuple[str, ...]
 
 
 def run_uploaded_analysis(
@@ -44,6 +46,17 @@ def run_uploaded_analysis(
         strategy, strategy_config = StrategyAutoTuner.discover(orchestrator)
         view = orchestrator.run_analytics(strategy, strategy_config)
 
+        transaction_categories = {item.category for item in domain.transactions}
+        auto_classified_categories = tuple(
+            sorted(transaction_categories - domain.category_cluster_map.keys())
+        )
+        valid_budget_targets = transaction_categories | {
+            item.master_cluster for item in view.processed_categories
+        }
+        unused_budget_targets = tuple(
+            sorted(domain.budget_overrides.keys() - valid_budget_targets)
+        )
+
         ExcelArchitect(str(output_path)).generate(view, orchestrator.reporting_data)
 
         return AnalysisResult(
@@ -53,4 +66,6 @@ def run_uploaded_analysis(
             duplicate_transaction_count=DataLoader.count_duplicate_transactions(
                 str(input_path)
             ),
+            auto_classified_categories=auto_classified_categories,
+            unused_budget_targets=unused_budget_targets,
         )
