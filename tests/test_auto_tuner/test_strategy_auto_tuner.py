@@ -1,6 +1,6 @@
 import pandas as pd
 
-from auto_tuner.strategy_auto_tuner import StrategyAutoTuner
+from auto_tuner.strategy_auto_tuner import StrategyAutoTuner, TuningSettings
 from config.config import BudgetStrategy
 from model.models import BudgetDomain, StrategyConfig, Transaction
 from orchestrator import Orchestrator
@@ -54,3 +54,26 @@ def test_short_history_uses_explicit_full_history_fallback():
 
     assert training is orchestrator
     assert validation["Expense"] == [("Cycle_du_2026-01-01", 100.0)]
+
+
+def test_discovery_returns_a_pure_tuning_result(capsys):
+    result = StrategyAutoTuner().discover(_orchestrator(900.0))
+
+    assert result.strategy in BudgetStrategy
+    assert isinstance(result.config, StrategyConfig)
+    assert len(result.leaderboard) == len(BudgetStrategy)
+    assert capsys.readouterr().out == ""
+
+
+def test_manual_settings_bypass_discovery():
+    settings = TuningSettings(
+        manual_mode=True,
+        active_strategy=BudgetStrategy.VARIANCE_BUFFER,
+        manual_params=StrategyConfig(safety_multiplier=1.3),
+    )
+
+    result = StrategyAutoTuner(settings).discover(_orchestrator(900.0))
+
+    assert result.strategy == BudgetStrategy.VARIANCE_BUFFER
+    assert result.config.safety_multiplier == 1.3
+    assert result.leaderboard == ()

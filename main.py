@@ -18,9 +18,9 @@ if __name__ == "__main__":
     orch = Orchestrator(domain_data)
     
     # Run discovery with the new Leaderboard printout
-    best_strat, best_params = StrategyAutoTuner.discover(orch)
+    tuning = StrategyAutoTuner().discover(orch)
     
-    view = orch.run_analytics(best_strat, best_params)
+    view = orch.run_analytics(tuning.strategy, tuning.config)
     architect = ExcelArchitect(OUTPUT_FILE)
     architect.generate(view, orch.reporting_data)
     

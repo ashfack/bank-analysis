@@ -41,8 +41,8 @@ def run_uploaded_analysis(
             budget_overrides=DataLoader.load_budget_overrides(str(budget_path)),
         )
         orchestrator = Orchestrator(domain)
-        strategy, strategy_config = StrategyAutoTuner.discover(orchestrator)
-        view = orchestrator.run_analytics(strategy, strategy_config)
+        tuning = StrategyAutoTuner().discover(orchestrator)
+        view = orchestrator.run_analytics(tuning.strategy, tuning.config)
 
         transaction_categories = {item.category for item in domain.transactions}
         auto_classified_categories = tuple(

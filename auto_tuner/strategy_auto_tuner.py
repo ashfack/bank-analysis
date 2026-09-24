@@ -1,5 +1,6 @@
 import itertools
 import math
+from dataclasses import dataclass
 from typing import Tuple, List, Dict
 from collections import defaultdict
 
@@ -10,13 +11,43 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from orchestrator import Orchestrator
 
+@dataclass(frozen=True)
+class TuningSettings:
+    manual_mode: bool = MANUAL_MODE
+    active_strategy: BudgetStrategy = ACTIVE_STRATEGY
+    manual_params: StrategyConfig = MANUAL_PARAMS
+    percentile_targets: Tuple[int, ...] = (75, 85)
+    safety_multipliers: Tuple[float, ...] = (1.05, 1.2)
+    volatility_sensitivities: Tuple[float, ...] = (0.8, 1.0)
+
+
+@dataclass(frozen=True)
+class StrategyScore:
+    strategy: BudgetStrategy
+    score: float
+    config: StrategyConfig
+
+
+@dataclass(frozen=True)
+class TuningResult:
+    strategy: BudgetStrategy
+    config: StrategyConfig
+    leaderboard: Tuple[StrategyScore, ...]
+
+
 class StrategyAutoTuner:
     """Responsibility: Discovery with detailed Parameter Leaderboard (Pure Python)"""
-    
-    @staticmethod
-    def discover(orchestrator: "Orchestrator") -> Tuple[BudgetStrategy, StrategyConfig]:
-        if MANUAL_MODE: 
-            return ACTIVE_STRATEGY, MANUAL_PARAMS
+
+    def __init__(self, settings: TuningSettings | None = None):
+        self.settings = settings or TuningSettings()
+
+    def discover(self, orchestrator: "Orchestrator") -> TuningResult:
+        if self.settings.manual_mode:
+            return TuningResult(
+                self.settings.active_strategy,
+                self.settings.manual_params,
+                (),
+            )
 
         training_orchestrator, cycle_history = StrategyAutoTuner._prepare_temporal_validation(orchestrator)
 
@@ -28,27 +59,26 @@ class StrategyAutoTuner:
         best_strat = BudgetStrategy.HYBRID_VOLATILITY
         best_config = StrategyConfig()
 
-        # Grid definition
-        grid = {'p': [75, 85], 'k': [1.05, 1.2], 'sigma_mult': [0.8, 1.0]}
-        keys = list(grid.keys())
-        combinations = [dict(zip(keys, v)) for v in itertools.product(*grid.values())]
-
-        print("\n" + "🔮" * 15 + " WIZARD LEADERBOARD " + "🔮" * 15)
-        print(f"{'STRATEGY':25} | {'SCORE':8} | {'BEST PARAMETERS'}")
-        print("-" * 85)
+        combinations = itertools.product(
+            self.settings.percentile_targets,
+            self.settings.safety_multipliers,
+            self.settings.volatility_sensitivities,
+        )
+        configurations = [
+            StrategyConfig(
+                percentile_target=percentile,
+                safety_multiplier=multiplier,
+                volatility_sensitivity=volatility,
+            )
+            for percentile, multiplier, volatility in combinations
+        ]
+        leaderboard = []
 
         for strat in BudgetStrategy:
             strat_best_score = -float('inf')
             strat_best_config = StrategyConfig()
 
-            for params in combinations:
-                current_config = StrategyConfig(
-                    percentile_target=params.get('p', 75),
-                    safety_multiplier=params.get('k', 1.1),
-                    volatility_sensitivity=params.get('sigma_mult', 0.8),
-                    histogram_bins=params.get('bins', 10)
-                )
-                
+            for current_config in configurations:
                 test_results = training_orchestrator.run_pipeline(strat, current_config)
                 score = StrategyAutoTuner.evaluate(cycle_history, test_results)
                 
@@ -61,10 +91,9 @@ class StrategyAutoTuner:
                     best_strat = strat
                     best_config = current_config
 
-            print(f"{strat.name:25} | {strat_best_score:8} | {strat_best_config}")
-        
-        print("="*85 + f"\nOVERALL WINNER: {best_strat.name} | {best_config}\n" + "="*85)
-        return best_strat, best_config
+            leaderboard.append(StrategyScore(strat, strat_best_score, strat_best_config))
+
+        return TuningResult(best_strat, best_config, tuple(leaderboard))
 
     @staticmethod
     def _prepare_temporal_validation(
