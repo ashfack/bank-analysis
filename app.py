@@ -1,18 +1,7 @@
 import streamlit as st
 import pandas as pd
 from analysis_runner import run_uploaded_analysis
-from budgeter.budget_status import BudgetStatus, get_budget_status
-
-# --- 1. SHARED STYLING LOGIC ---
-def get_budget_color(val: float, limit: float, cluster: str) -> str:
-    colors = {
-        BudgetStatus.NEUTRAL: "#FFFFFF",
-        BudgetStatus.DARK_GREEN: "#548235",
-        BudgetStatus.LIGHT_GREEN: "#50BE5B",
-        BudgetStatus.ORANGE: "#ED7D31",
-        BudgetStatus.RED: "#C00000",
-    }
-    return colors[get_budget_status(val, limit, cluster)]
+from dashboard import build_pilotage_table, style_pilotage_table
 
 # --- 2. PAGE CONFIGURATION ---
 st.set_page_config(page_title="AI Financial Orchestrator", page_icon="📊", layout="wide")
@@ -85,39 +74,36 @@ if st.session_state.get('processed'):
     # --- PAGE 1: PILOTAGE ---
     if active_nav == "📑 Pilotage":
         st.subheader("Master Cluster Time-Series")
-        clusters = view.clusters
-        cycles = view.cycles
+        st.caption("Sélectionnez une cellule de dépense pour ouvrir les opérations correspondantes.")
+        pilotage_table = build_pilotage_table(view)
+        column_config = {
+            "Cycle": st.column_config.TextColumn("Cycle", width="medium"),
+            **{
+                cluster: st.column_config.NumberColumn(cluster, format="%.0f €", width="medium")
+                for cluster in view.clusters
+            },
+        }
+        pilotage_event = st.dataframe(
+            style_pilotage_table(pilotage_table, view),
+            width="stretch",
+            height=720,
+            hide_index=True,
+            column_config=column_config,
+            key="pilotage_table",
+            on_select="rerun",
+            selection_mode="single-cell",
+            placeholder="—",
+        )
 
-        h_cols = st.columns([1.5] + [1] * len(clusters))
-        h_cols[0].write("**Cycle**")
-        for idx, cluster in enumerate(clusters):
-            h_cols[idx+1].markdown(f"<div style='text-align: center'><b>{cluster}</b></div>", unsafe_allow_html=True)
-
-        b_cols = st.columns([1.5] + [1] * len(clusters))
-        b_cols[0].markdown("*:blue[BUDGET THEORIQUE]*")
-        for idx, cluster in enumerate(clusters):
-            val = view.get_budget(cluster)
-            b_cols[idx+1].markdown(f"<div style='text-align: center; color: #1E90FF;'><b>{val:,.0f} €</b></div>", unsafe_allow_html=True)
-        
-        st.divider()
-
-        for cycle in cycles:
-            r_cols = st.columns([1.5] + [1] * len(clusters))
-            r_cols[0].write(f"**{cycle}**")
-            for idx, cluster in enumerate(clusters):
-                val = view.get_amount(cycle, cluster)
-                limit = view.get_budget(cluster)
-                bg = get_budget_color(val, limit, cluster)
-                
-                with r_cols[idx+1]:
-                    st.markdown(f"""<div style="background-color: {bg}; border-radius: 4px; padding: 2px;">""", unsafe_allow_html=True)
-                    label = f"{val:,.0f} €" if val > 0 else "—"
-                    if st.button(label, key=f"btn_{cycle}_{cluster}", width="stretch"):
-                        st.session_state['sel_cycle'] = cycle
-                        st.session_state['sel_cluster'] = cluster
-                        st.session_state['nav_index'] = 2 
-                        st.rerun()
-                    st.markdown("</div>", unsafe_allow_html=True)
+        if pilotage_event.selection.cells:
+            row_index, cluster = pilotage_event.selection.cells[0]
+            if row_index > 0 and cluster != "Cycle":
+                cycle = pilotage_table.iloc[row_index]["Cycle"]
+                if view.get_amount(cycle, cluster) > 0:
+                    st.session_state['sel_cycle'] = cycle
+                    st.session_state['sel_cluster'] = cluster
+                    st.session_state['nav_index'] = 2
+                    st.rerun()
 
     # --- PAGE 2: DETAILS ---
     elif active_nav == "🔍 Details Discovery":
