@@ -21,6 +21,10 @@ from model.models import Transaction
 CsvSource = Union[str, Path, bytes, BinaryIO, TextIO]
 
 
+class CsvSchemaError(ValueError):
+    """Raised when an input CSV does not satisfy its declared contract."""
+
+
 def _missing_path(source: CsvSource) -> bool:
     return isinstance(source, (str, Path)) and not os.path.exists(source)
 
@@ -82,7 +86,9 @@ class MappingCsvReader:
 
         frame = _read_csv(source)
         if not {COL_RAW_CATEGORY, COL_RAW_CLUSTER}.issubset(frame.columns):
-            return {}
+            raise CsvSchemaError(
+                "Mapping CSV must contain category and cluster columns"
+            )
 
         duplicated_categories = (
             frame.loc[
@@ -114,9 +120,11 @@ class BudgetCsvReader:
 
         try:
             frame = pd.read_csv(StringIO("\n".join(rows)), sep=CSV_SEP)
-        except Exception:
-            return {}
+        except Exception as error:
+            raise CsvSchemaError("Budget CSV could not be parsed") from error
 
         if not {COL_RAW_CATEGORY, COL_RAW_OVERRIDE}.issubset(frame.columns):
-            return {}
+            raise CsvSchemaError(
+                "Budget CSV must contain category and budget_override columns"
+            )
         return dict(zip(frame[COL_RAW_CATEGORY], frame[COL_RAW_OVERRIDE]))

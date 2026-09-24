@@ -5,6 +5,7 @@ import pandas as pd
 from io import StringIO
 from infrastructure.csv_readers import (
     BudgetCsvReader,
+    CsvSchemaError,
     MappingCsvReader,
     TransactionCsvReader,
 )
@@ -143,8 +144,8 @@ class TestCsvReaders:
         # Using wrong column names
         path.write_text("wrong_col;another_wrong_col\nValue1;Value2", encoding='utf-8')
         
-        mapping = MappingCsvReader().read(str(path))
-        assert mapping == {} # Should return empty because headers don't match
+        with pytest.raises(CsvSchemaError, match="Mapping CSV must contain"):
+            MappingCsvReader().read(str(path))
 
     # --- FIX FOR LINE 42: Catastrophic Exception ---
     def test_load_overrides_catastrophic_error(self, tmp_path):
@@ -154,8 +155,8 @@ class TestCsvReaders:
         
         # We mock pd.read_csv to throw an error when it touches this specific method
         with patch("pandas.read_csv", side_effect=Exception("Catastrophic Failure")):
-            result = BudgetCsvReader().read(str(path))
-            assert result == {} # Should catch the exception and return empty dict
+            with pytest.raises(CsvSchemaError, match="could not be parsed"):
+                BudgetCsvReader().read(str(path))
 
     def test_prepare_transaction_data_preserves_negative_european_amounts(self, tmp_path):
         """
