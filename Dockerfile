@@ -18,9 +18,12 @@ RUN pip install --no-cache-dir --upgrade -r requirements.txt
 # Using --chown=user ensures our non-root user owns the files
 COPY --chown=user . .
 
-# Step 5: Inform HF which port to use
+# Step 5: Stop the Space build if the application test suite is broken
+RUN pytest tests/
+
+# Step 6: Inform HF which port to use
 EXPOSE 7860
 
-# Step 6: Start Streamlit
+# Step 7: Start Streamlit
 # We force the port to 7860 and the address to 0.0.0.0
 CMD ["streamlit", "run", "app.py", "--server.port", "7860", "--server.address", "0.0.0.0"]
