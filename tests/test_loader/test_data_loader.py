@@ -73,6 +73,22 @@ class TestDataLoader:
         with pytest.raises(ValueError, match="missing required columns"):
             DataLoader.prepare_transaction_data(str(path))
 
+    def test_count_duplicate_transactions_counts_only_repeated_rows(self, tmp_path):
+        path = tmp_path / "transactions.csv"
+        path.write_text(
+            "dateOp;label;amount;category\n"
+            "2026-01-01;Market;-10,00;Food\n"
+            "2026-01-01;Market;-10,00;Food\n"
+            "2026-01-01;Market;-12,00;Food\n",
+            encoding="utf-8",
+        )
+
+        assert DataLoader.count_duplicate_transactions(str(path)) == 1
+
+    def test_count_duplicate_transactions_requires_an_input_file(self):
+        with pytest.raises(FileNotFoundError, match="Input data not found"):
+            DataLoader.count_duplicate_transactions("missing-transactions.csv")
+
     # --- 2. Testing Mapping & Overrides ---
 
     def test_load_category_cluster_map(self, tmp_path):

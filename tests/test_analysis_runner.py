@@ -45,3 +45,18 @@ def test_uploaded_analyses_are_isolated_when_run_concurrently():
     assert "SECOND_USER" in _workbook_strings(second_result.report_bytes)
     assert "FIRST_USER" not in _workbook_strings(second_result.report_bytes)
     assert first_result.report_bytes != second_result.report_bytes
+    assert first_result.duplicate_transaction_count == 0
+    assert second_result.duplicate_transaction_count == 0
+
+
+def test_uploaded_analysis_reports_duplicate_transactions():
+    duplicated_export = (
+        "dateOp;label;amount;category\n"
+        "2026-01-01;Salary;2000,00;Salaire fixe\n"
+        "2026-01-02;Repeated;-10,00;Expense\n"
+        "2026-01-02;Repeated;-10,00;Expense\n"
+    ).encode()
+
+    result = run_uploaded_analysis(duplicated_export, MAPPING, BUDGET)
+
+    assert result.duplicate_transaction_count == 1

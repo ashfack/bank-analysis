@@ -15,6 +15,7 @@ class AnalysisResult:
     view: BudgetView
     reporting_data: List[Dict[str, Any]]
     report_bytes: bytes
+    duplicate_transaction_count: int
 
 
 def run_uploaded_analysis(
@@ -49,4 +50,7 @@ def run_uploaded_analysis(
             view=view,
             reporting_data=orchestrator.reporting_data,
             report_bytes=output_path.read_bytes(),
+            duplicate_transaction_count=DataLoader.count_duplicate_transactions(
+                str(input_path)
+            ),
         )

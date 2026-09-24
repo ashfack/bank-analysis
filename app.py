@@ -62,6 +62,9 @@ if st.button("🚀 Synchronize & Optimize", width="stretch"):
                 st.session_state['budget_view'] = result.view
                 st.session_state['raw_data'] = pd.DataFrame(result.reporting_data)
                 st.session_state['report_bytes'] = result.report_bytes
+                st.session_state['duplicate_transaction_count'] = (
+                    result.duplicate_transaction_count
+                )
                 st.session_state['processed'] = True
                 st.rerun()
         except Exception as e:
@@ -70,6 +73,14 @@ if st.button("🚀 Synchronize & Optimize", width="stretch"):
 # --- 5. DASHBOARD VIEW ADAPTER ---
 if st.session_state.get('processed'):
     view = st.session_state['budget_view']
+
+    duplicate_count = st.session_state.get('duplicate_transaction_count', 0)
+    if duplicate_count:
+        st.warning(
+            f"Qualité des données : {duplicate_count} ligne(s) d'opération "
+            "strictement identique(s) ont été détectée(s). Elles restent "
+            "incluses dans les calculs."
+        )
     
     # --- PAGE 1: PILOTAGE ---
     if active_nav == "📑 Pilotage":

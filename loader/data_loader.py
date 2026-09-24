@@ -11,6 +11,15 @@ from model.models import Transaction
 class DataLoader:
 
     @staticmethod
+    def count_duplicate_transactions(path: str) -> int:
+        """Count repeated CSV rows without removing them from the analysis."""
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Input data not found at {path}")
+
+        df = pd.read_csv(path, sep=CSV_SEP, encoding=ENCODING)
+        return int(df.duplicated(keep="first").sum())
+
+    @staticmethod
     def load_category_cluster_map(path: str) -> Dict[str, str]:
         if not os.path.exists(path): return {}
         
