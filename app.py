@@ -1,27 +1,18 @@
 import streamlit as st
 import pandas as pd
 from analysis_runner import run_uploaded_analysis
+from budgeter.budget_status import BudgetStatus, get_budget_status
 
 # --- 1. SHARED STYLING LOGIC ---
 def get_budget_color(val: float, limit: float, cluster: str) -> str:
-    # Use .startswith() to avoid matching "10." or "20."
-    is_income_or_internal = cluster.startswith("0.")
-    
-    if val == 0:
-        return "#FFFFFF"
-        
-    if is_income_or_internal:
-        return "#548235" # Always green for income/internal if > 0
-    
-    # Standard budget logic for expense clusters (1, 2, 3...)
-    if val <= limit:
-        return "#50BE5B" if val > limit * 0.5 else "#548235"  
-    if val <= limit * 1.5:
-        return "#ED7D31"  
-    return "#C00000"  
-
-def get_text_color(hex_color: str) -> str:
-    return "white" if hex_color != "#FFFFFF" else "black"
+    colors = {
+        BudgetStatus.NEUTRAL: "#FFFFFF",
+        BudgetStatus.DARK_GREEN: "#548235",
+        BudgetStatus.LIGHT_GREEN: "#50BE5B",
+        BudgetStatus.ORANGE: "#ED7D31",
+        BudgetStatus.RED: "#C00000",
+    }
+    return colors[get_budget_status(val, limit, cluster)]
 
 # --- 2. PAGE CONFIGURATION ---
 st.set_page_config(page_title="AI Financial Orchestrator", page_icon="📊", layout="wide")

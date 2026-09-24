@@ -1,5 +1,6 @@
 import pandas as pd
 from typing import Dict, Any, List
+from budgeter.budget_status import get_budget_status
 from model.models import BudgetView, ProcessedCategory
 
 class ExcelArchitect:
@@ -103,18 +104,7 @@ class ExcelArchitect:
         return links
 
     def _determine_color(self, val: float, limit: float, cluster: str, styles: dict):
-        """Restored original business logic for coloring."""
-        # Internal/Incoming logic (always green if positive)
-        if "0." in cluster or val == 0: 
-            return styles['dark_green'] if val > 0 else styles['neutral']
-        
-        # Spending logic based on theoretical limit
-        if val <= limit: 
-            # If well under budget (>50% buffer), stay dark green. Otherwise light green.
-            return styles['light_green'] if val > limit * 0.5 else styles['dark_green']
-        
-        # Over-budget logic
-        return styles['orange'] if val <= limit * 1.5 else styles['red']
+        return styles[get_budget_status(val, limit, cluster).value]
 
     def _get_styles(self, wb) -> Dict[str, Any]:
         """Restored original high-fidelity styling."""
