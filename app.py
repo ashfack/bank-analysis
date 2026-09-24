@@ -60,7 +60,7 @@ with st.sidebar:
 st.title("📊 AI-Powered Financial Orchestrator")
 
 # --- 4. EXECUTION ENGINE ---
-if st.button("🚀 Synchronize & Optimize", use_container_width=True):
+if st.button("🚀 Synchronize & Optimize", width="stretch"):
     if bank_export and mapping_cfg and budget_cfg:
         try:
             with st.spinner("🧠 Orchestrating Domain Logic..."):
@@ -112,7 +112,7 @@ if st.session_state.get('processed'):
                 with r_cols[idx+1]:
                     st.markdown(f"""<div style="background-color: {bg}; border-radius: 4px; padding: 2px;">""", unsafe_allow_html=True)
                     label = f"{val:,.0f} €" if val > 0 else "—"
-                    if st.button(label, key=f"btn_{cycle}_{cluster}", use_container_width=True):
+                    if st.button(label, key=f"btn_{cycle}_{cluster}", width="stretch"):
                         st.session_state['sel_cycle'] = cycle
                         st.session_state['sel_cluster'] = cluster
                         st.session_state['nav_index'] = 2 
@@ -125,7 +125,7 @@ if st.session_state.get('processed'):
         df = pd.DataFrame([vars(c) for c in view.processed_categories])
         if st.session_state['sel_cluster'] != "All Clusters":
             df = df[df['master_cluster'] == st.session_state['sel_cluster']]
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)
 
     # --- PAGE 3: LEDGER ---
     elif active_nav == "📝 Transaction Ledger":
@@ -141,7 +141,7 @@ if st.session_state.get('processed'):
 
         st.metric("Total", f"{ledger_df['amount'].sum():,.2f} €")
         st.dataframe(ledger_df[['cycle', 'master_cluster', 'category', 'label', 'amount']].sort_values('amount', ascending=False),
-            use_container_width=True, hide_index=True)
+            width="stretch", hide_index=True)
 
 # --- 6. GLOBAL EXPORT ---
 if st.session_state.get('processed'):
@@ -151,5 +151,5 @@ if st.session_state.get('processed'):
         st.session_state['report_bytes'],
         file_name="AI_Budget_Report.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True,
+        width="stretch",
     )
