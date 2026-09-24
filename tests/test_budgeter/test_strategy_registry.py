@@ -88,3 +88,16 @@ class TestStrategyRegistry:
             BudgetStrategy.ADAPTIVE_Z_SCORE, [100], stats, config
         )
         assert result == 106.67
+
+    def test_custom_strategy_can_be_registered_without_changing_the_registry(self, stats):
+        custom_strategy = "custom"
+        StrategyRegistry.register(
+            custom_strategy,
+            lambda data, current_stats, config: current_stats.median * 2,
+        )
+        try:
+            result = StrategyRegistry.compute_atomic(custom_strategy, [100], stats)
+        finally:
+            StrategyRegistry.unregister(custom_strategy)
+
+        assert result == 200.0
