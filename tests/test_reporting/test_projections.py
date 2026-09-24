@@ -1,10 +1,10 @@
 from model.models import BudgetView, EnrichedTransaction, ProcessedCategory
-from reporting.projections import build_category_table, build_ledger_table
+from reporting.projections import build_category_table, build_cycle_table, build_ledger_table
 
 
 def _view() -> BudgetView:
     return BudgetView(
-        matrix={},
+        matrix={"Cycle_du_2026-01-01": {"2. Food": 10.0}},
         cluster_budgets={"2. Food": 100.0},
         processed_categories=[
             ProcessedCategory("Food", "2. Food", 10, 0, 1, 1, 10, 100, 10)
@@ -28,3 +28,10 @@ def test_ledger_table_attaches_resolved_clusters():
 
     assert table.loc[0, "master_cluster"] == "2. Food"
     assert table.loc[0, "raw_amount"] == -10
+
+
+def test_cycle_table_projects_the_budget_matrix():
+    table = build_cycle_table(_view())
+
+    assert list(table.index) == ["Cycle_du_2026-01-01"]
+    assert table.loc["Cycle_du_2026-01-01", "2. Food"] == 10

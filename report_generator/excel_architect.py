@@ -2,7 +2,11 @@ import pandas as pd
 from typing import Dict, Any, List
 from budgeter.budget_status import get_budget_status
 from model.models import BudgetView, EnrichedTransaction
-from reporting.projections import build_category_table, build_ledger_table
+from reporting.projections import (
+    build_category_table,
+    build_cycle_table,
+    build_ledger_table,
+)
 
 class ExcelArchitect:
     def __init__(self, output_path: str):
@@ -17,7 +21,7 @@ class ExcelArchitect:
         Uses BudgetView for summary and raw_transactions for the deep-dive ledger.
         """
         # 1. Prepare Dataframes
-        pilotage_df = self._prepare_pilotage_df(view)
+        pilotage_df = build_cycle_table(view)
         mapping_df = build_category_table(view)
         mapping_df = mapping_df.sort_values("master_cluster").reset_index(drop=True)
         ledger_df = build_ledger_table(view, raw_transactions)
@@ -31,15 +35,6 @@ class ExcelArchitect:
             
             # Apply specialized Excel logic (Colors & Links)
             self._apply_advanced_styling(writer, view, pilotage_df, mapping_df, ledger_df)
-
-    def _prepare_pilotage_df(self, view: BudgetView) -> pd.DataFrame:
-        data = []
-        for cycle in view.cycles:
-            row = {"cycle": cycle}
-            for cluster in view.clusters:
-                row[cluster] = view.get_amount(cycle, cluster)
-            data.append(row)
-        return pd.DataFrame(data).set_index("cycle")
 
     def _apply_advanced_styling(self, writer, view: BudgetView, pivot, mapping, ledger):
         wb = writer.book

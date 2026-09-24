@@ -10,6 +10,18 @@ def build_category_table(view: BudgetView) -> pd.DataFrame:
     return pd.DataFrame([vars(category) for category in view.processed_categories])
 
 
+def build_cycle_table(view: BudgetView) -> pd.DataFrame:
+    """Project cycle amounts into the indexed table used by exported reports."""
+    rows = [
+        {
+            "cycle": cycle,
+            **{cluster: view.get_amount(cycle, cluster) for cluster in view.clusters},
+        }
+        for cycle in view.cycles
+    ]
+    return pd.DataFrame(rows, columns=["cycle", *view.clusters]).set_index("cycle")
+
+
 def build_ledger_table(
     view: BudgetView,
     transactions: Sequence[EnrichedTransaction],
