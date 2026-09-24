@@ -1,13 +1,23 @@
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 
 from typing import Dict, List, Tuple
-import pandas as pd
+
+
+class BudgetStrategy(Enum):
+    """Supported mathematical strategies for budget calculation."""
+
+    PERCENTILE_GUARDRAIL = "percentile_guardrail"
+    ADAPTIVE_Z_SCORE = "adaptive_z_score"
+    HISTOGRAM_MODE = "histogram_mode"
+    VARIANCE_BUFFER = "variance_buffer"
+    HYBRID_VOLATILITY = "hybrid_volatility"
 
 @dataclass(frozen=True)
 class Transaction:
     """The formal definition of a single financial movement."""
-    dateOperation: pd.Timestamp
+    dateOperation: datetime
     label: str
     amount: float
     category: str

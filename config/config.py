@@ -1,6 +1,4 @@
-from enum import Enum, auto
-
-from model.models import StrategyConfig
+from model.models import BudgetStrategy, StrategyConfig
 
 
 # --- GLOBAL CONFIGURATION ---
@@ -9,15 +7,6 @@ INPUT_FILE = 'input/export-operations.csv'
 MAPPING_FILE = 'input/mapping_config.csv'
 BUDGET_FILE = 'input/budget_config.csv'
 OUTPUT_FILE = 'output/Budgeted_V1.xlsx'
-
-
-class BudgetStrategy(Enum):
-    """Supported mathematical strategies for budget calculation."""
-    PERCENTILE_GUARDRAIL = auto()
-    ADAPTIVE_Z_SCORE = auto()
-    HISTOGRAM_MODE = auto()
-    VARIANCE_BUFFER = auto()
-    HYBRID_VOLATILITY = auto()
 
 
 # --- CLASSIFICATION THRESHOLDS ---

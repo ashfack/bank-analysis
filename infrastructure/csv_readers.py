@@ -60,7 +60,7 @@ class TransactionCsvReader:
         frame[DOMAIN_DATE] = pd.to_datetime(frame[COL_RAW_DATE])
         transactions = [
             Transaction(
-                dateOperation=row[DOMAIN_DATE],
+                dateOperation=row[DOMAIN_DATE].to_pydatetime(),
                 label=str(row.get("label", "Unknown")),
                 amount=row[COL_RAW_AMOUNT],
                 category=row[COL_RAW_CATEGORY],
