@@ -35,9 +35,9 @@ def test_uploaded_files_flow_through_quality_analysis_and_excel_report():
         BUDGET_CONFIG,
     )
 
-    assert result.duplicate_transaction_count == 1
-    assert result.auto_classified_categories == ("Unmapped expense",)
-    assert result.unused_budget_targets == ("Unused cluster",)
+    assert result.quality.duplicate_transaction_count == 1
+    assert result.quality.auto_classified_categories == ("Unmapped expense",)
+    assert result.quality.unused_budget_targets == ("Unused cluster",)
 
     assert len(result.reporting_data) == 4
     assert result.view.get_amount("Cycle_du_2026-01-01", "0. Incoming") == 2000

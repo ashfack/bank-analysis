@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 from auto_tuner.strategy_auto_tuner import StrategyAutoTuner
 from loader.data_loader import DataLoader
-from model.models import BudgetDomain, BudgetView
+from model.models import BudgetDomain, BudgetView, DataQualityReport
 from orchestrator import Orchestrator
 from report_generator.excel_architect import ExcelArchitect
 
@@ -15,9 +15,7 @@ class AnalysisResult:
     view: BudgetView
     reporting_data: List[Dict[str, Any]]
     report_bytes: bytes
-    duplicate_transaction_count: int
-    auto_classified_categories: Tuple[str, ...]
-    unused_budget_targets: Tuple[str, ...]
+    quality: DataQualityReport
 
 
 def run_uploaded_analysis(
@@ -63,9 +61,11 @@ def run_uploaded_analysis(
             view=view,
             reporting_data=orchestrator.reporting_data,
             report_bytes=output_path.read_bytes(),
-            duplicate_transaction_count=DataLoader.count_duplicate_transactions(
-                str(input_path)
+            quality=DataQualityReport(
+                duplicate_transaction_count=DataLoader.count_duplicate_transactions(
+                    str(input_path)
+                ),
+                auto_classified_categories=auto_classified_categories,
+                unused_budget_targets=unused_budget_targets,
             ),
-            auto_classified_categories=auto_classified_categories,
-            unused_budget_targets=unused_budget_targets,
         )

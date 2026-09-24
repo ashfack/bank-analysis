@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from typing import List, Dict
+from typing import Dict, List, Tuple
 import pandas as pd
 
 @dataclass(frozen=True)
@@ -18,6 +18,26 @@ class BudgetDomain:
     transactions: List[Transaction]
     category_cluster_map: Dict[str, str]
     budget_overrides: Dict[str, str]
+
+
+@dataclass(frozen=True)
+class DataQualityReport:
+    """Quality findings produced while preparing one analysis."""
+
+    duplicate_transaction_count: int = 0
+    auto_classified_categories: Tuple[str, ...] = ()
+    unused_budget_targets: Tuple[str, ...] = ()
+
+    @property
+    def alert_count(self) -> int:
+        return sum(
+            bool(value)
+            for value in (
+                self.duplicate_transaction_count,
+                self.auto_classified_categories,
+                self.unused_budget_targets,
+            )
+        )
 
 class ClusterLabel(str, Enum):
     """

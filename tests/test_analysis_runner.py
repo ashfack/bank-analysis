@@ -45,12 +45,8 @@ def test_uploaded_analyses_are_isolated_when_run_concurrently():
     assert "SECOND_USER" in _workbook_strings(second_result.report_bytes)
     assert "FIRST_USER" not in _workbook_strings(second_result.report_bytes)
     assert first_result.report_bytes != second_result.report_bytes
-    assert first_result.duplicate_transaction_count == 0
-    assert second_result.duplicate_transaction_count == 0
-    assert first_result.auto_classified_categories == ()
-    assert second_result.auto_classified_categories == ()
-    assert first_result.unused_budget_targets == ()
-    assert second_result.unused_budget_targets == ()
+    assert first_result.quality.alert_count == 0
+    assert second_result.quality.alert_count == 0
 
 
 def test_uploaded_analysis_reports_duplicate_transactions():
@@ -63,7 +59,7 @@ def test_uploaded_analysis_reports_duplicate_transactions():
 
     result = run_uploaded_analysis(duplicated_export, MAPPING, BUDGET)
 
-    assert result.duplicate_transaction_count == 1
+    assert result.quality.duplicate_transaction_count == 1
 
 
 def test_uploaded_analysis_reports_automatic_categories_and_unused_budgets():
@@ -81,5 +77,5 @@ def test_uploaded_analysis_reports_automatic_categories_and_unused_budgets():
 
     result = run_uploaded_analysis(bank_export, mapping, budget)
 
-    assert result.auto_classified_categories == ("Unmapped category",)
-    assert result.unused_budget_targets == ("Unused cluster",)
+    assert result.quality.auto_classified_categories == ("Unmapped category",)
+    assert result.quality.unused_budget_targets == ("Unused cluster",)

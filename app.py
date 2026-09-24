@@ -62,15 +62,7 @@ if st.button("🚀 Synchronize & Optimize", width="stretch"):
                 st.session_state['budget_view'] = result.view
                 st.session_state['raw_data'] = pd.DataFrame(result.reporting_data)
                 st.session_state['report_bytes'] = result.report_bytes
-                st.session_state['duplicate_transaction_count'] = (
-                    result.duplicate_transaction_count
-                )
-                st.session_state['auto_classified_categories'] = (
-                    result.auto_classified_categories
-                )
-                st.session_state['unused_budget_targets'] = (
-                    result.unused_budget_targets
-                )
+                st.session_state['quality_report'] = result.quality
                 st.session_state['processed'] = True
                 st.rerun()
         except Exception as e:
@@ -80,40 +72,30 @@ if st.button("🚀 Synchronize & Optimize", width="stretch"):
 if st.session_state.get('processed'):
     view = st.session_state['budget_view']
 
-    duplicate_count = st.session_state.get('duplicate_transaction_count', 0)
-    auto_classified = st.session_state.get('auto_classified_categories', ())
-    unused_budget_targets = st.session_state.get('unused_budget_targets', ())
-    quality_alert_count = sum(
-        bool(value)
-        for value in (
-            duplicate_count,
-            auto_classified,
-            unused_budget_targets,
-        )
-    )
-    if quality_alert_count:
+    quality = st.session_state.get('quality_report')
+    if quality and quality.alert_count:
         with st.expander(
-            f"⚠️ Qualité des données — {quality_alert_count} point(s) à vérifier"
+            f"⚠️ Qualité des données — {quality.alert_count} point(s) à vérifier"
         ):
-            if duplicate_count:
+            if quality.duplicate_transaction_count:
                 st.warning(
-                    f"{duplicate_count} ligne(s) d'opération strictement "
+                    f"{quality.duplicate_transaction_count} ligne(s) d'opération strictement "
                     "identique(s) ont été détectée(s). Elles restent incluses "
                     "dans les calculs."
                 )
-            if auto_classified:
+            if quality.auto_classified_categories:
                 st.warning(
-                    f"{len(auto_classified)} catégorie(s) sans mapping manuel "
+                    f"{len(quality.auto_classified_categories)} catégorie(s) sans mapping manuel "
                     "ont été classées automatiquement."
                 )
-                st.write(", ".join(auto_classified))
-            if unused_budget_targets:
+                st.write(", ".join(quality.auto_classified_categories))
+            if quality.unused_budget_targets:
                 st.warning(
-                    f"{len(unused_budget_targets)} entrée(s) de budget ne "
+                    f"{len(quality.unused_budget_targets)} entrée(s) de budget ne "
                     "correspondent à aucune catégorie ni aucun cluster et "
                     "n'ont donc aucun effet."
                 )
-                st.write(", ".join(unused_budget_targets))
+                st.write(", ".join(quality.unused_budget_targets))
     
     # --- PAGE 1: PILOTAGE ---
     if active_nav == "📑 Pilotage":

@@ -1,7 +1,7 @@
 import pandas as pd
 from streamlit.testing.v1 import AppTest
 
-from model.models import BudgetView, ProcessedCategory
+from model.models import BudgetView, DataQualityReport, ProcessedCategory
 
 
 def _processed_app() -> AppTest:
@@ -40,9 +40,11 @@ def _processed_app() -> AppTest:
         ]
     )
     app.session_state["report_bytes"] = b"synthetic workbook"
-    app.session_state["duplicate_transaction_count"] = 2
-    app.session_state["auto_classified_categories"] = ("Food",)
-    app.session_state["unused_budget_targets"] = ("Unused cluster",)
+    app.session_state["quality_report"] = DataQualityReport(
+        duplicate_transaction_count=2,
+        auto_classified_categories=("Food",),
+        unused_budget_targets=("Unused cluster",),
+    )
     return app
 
 
