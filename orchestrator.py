@@ -22,27 +22,6 @@ class Orchestrator:
     def reporting_data(self) -> List[Dict[str, Any]]:
         return self._enriched_data
     
-    def _define_cycles(self) -> List[Dict[str, Any]]:
-        """Identifies pay cycles and preserves original signs for categorization."""
-        pay_dates = sorted({
-            t.dateOperation for t in self.transactions 
-            if t.category == ANCHOR_CATEGORY
-        })
-        
-        enriched = []
-        for t in self.transactions:
-            past_anchors = [p for p in pay_dates if p <= t.dateOperation]
-            cycle_label = f"Cycle_du_{max(past_anchors).strftime('%Y-%m-%d')}" if past_anchors else "Initial"
-            
-            enriched.append({
-                'category': t.category,
-                'amount': abs(t.amount),
-                'raw_amount': t.amount,
-                'label': t.label,
-                'cycle': cycle_label
-            })
-        return enriched
-    
     def run_analytics(self, strategy, config) -> BudgetView:
         """
         Executes the full pipeline, applies overrides, 

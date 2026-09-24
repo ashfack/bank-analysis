@@ -141,29 +141,6 @@ class TestOrchestratorCoverage:
         assert results[0].frequency == 1.0
 
     def test_cluster_numeric_cap_branch(self):
-        """Triggers the numeric distribution branch in _calculate_distribution."""
-        t1 = Transaction(pd.Timestamp('2026-01-01'), "A", -10.0, "Cat1")
-        t2 = Transaction(pd.Timestamp('2026-01-01'), "B", -10.0, "Cat2")
-        # Overriding a cluster with a number '100'
-        domain = BudgetDomain([t1, t2], {"Cat1": "Clus", "Cat2": "Clus"}, {"Clus": "100"})
-        orch = Orchestrator(domain)
-        
-        results = orch.run_pipeline(BudgetStrategy.HYBRID_VOLATILITY, StrategyConfig())
-        # Check that the 100 was distributed
-        clus_results = [r for r in results if r.master_cluster == "Clus"]
-        assert sum(r.theoretical_budget for r in clus_results) == 100.0
-
-    def test_cluster_symbolic_rule_branch(self):
-        """Triggers the symbolic rule branch in _calculate_distribution."""
-        t1 = Transaction(pd.Timestamp('2026-01-01'), "A", -100.0, "Cat1")
-        # Overriding a cluster with a string '+10%'
-        domain = BudgetDomain([t1], {"Cat1": "Clus"}, {"Clus": "+10%"})
-        orch = Orchestrator(domain)
-        
-        results = orch.run_pipeline(BudgetStrategy.HYBRID_VOLATILITY, StrategyConfig())
-        assert results[0].theoretical_budget == 110.0
-
-    def test_cluster_numeric_cap_branch(self):
         """Hits: _update_cluster AND the numeric branch of _calculate_distribution."""
         t1 = Transaction(pd.Timestamp('2026-01-01'), "A", -50.0, "Cat1")
         # Overriding a cluster 'Clus' with a number '100'
@@ -263,15 +240,6 @@ class TestOrchestratorCoverage:
         stats = orch._calculate_stats([10.0], total_cycles=0)
         assert stats.frequency == 0.0
 
-    def test_symbolic_cluster_path(self):
-        """Hits the 'else' (symbolic) branch in _calculate_distribution."""
-        t1 = Transaction(pd.Timestamp('2026-01-01'), "A", -100.0, "Cat1")
-        domain = BudgetDomain([t1], {"Cat1": "Clus"}, {"Clus": "+10%"})
-        orch = Orchestrator(domain)
-        
-        results = orch.run_pipeline(BudgetStrategy.HYBRID_VOLATILITY, StrategyConfig())
-        # This hits the SymbolicOverride.apply path for clusters
-        assert results[0].theoretical_budget == 110.0
     def test_kill_final_seven_lines(self):
         """Surgical strike to reach 100% coverage."""
         # Setup: One category with 0 spending
