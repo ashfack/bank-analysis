@@ -7,7 +7,14 @@ from budgeter.budget_custom_overrider import SymbolicOverride
 from budgeter.strategy_registry import StrategyRegistry
 from categorizer.categorizer import Categorizer
 from config.config import ANCHOR_CATEGORY, BudgetStrategy
-from model.models import BudgetDomain, BudgetView, CategoryStats, ProcessedCategory, StrategyConfig
+from model.models import (
+    BudgetDomain,
+    BudgetView,
+    CategoryStats,
+    EnrichedTransaction,
+    ProcessedCategory,
+    StrategyConfig,
+)
 
 
 class Orchestrator:
@@ -19,7 +26,7 @@ class Orchestrator:
         self._enriched_data = self._define_cycles()
 
     @property
-    def reporting_data(self) -> List[Dict[str, Any]]:
+    def reporting_data(self) -> List[EnrichedTransaction]:
         return self._enriched_data
     
     def run_analytics(self, strategy, config) -> BudgetView:
@@ -36,8 +43,8 @@ class Orchestrator:
         cat_to_cluster = {c.category: c.master_cluster for c in final_categories}
         
         for item in self._enriched_data:
-            cluster = cat_to_cluster.get(item['category'], "Unmapped")
-            matrix[item['cycle']][cluster] += item['amount']
+            cluster = cat_to_cluster.get(item.category, "Unmapped")
+            matrix[item.cycle][cluster] += item.amount
             
         # 3. Build the Cluster Budgets (Summing overrides)
         cluster_budgets = defaultdict(float)
@@ -58,7 +65,7 @@ class Orchestrator:
     def _process_all_categories(self, strategy, config) -> List[ProcessedCategory]:
         """Groups data and maps each category to a ProcessedCategory DTO."""
         grouped = self._group_by_category()
-        cycle_count = len({item['cycle'] for item in self._enriched_data})
+        cycle_count = len({item.cycle for item in self._enriched_data})
 
         return [
             self._create_dto(cat, data, cycle_count, strategy, config)
@@ -105,11 +112,11 @@ class Orchestrator:
     def _group_by_category(self) -> Dict[str, Dict]:
         groups = defaultdict(lambda: {"cycles": defaultdict(float), "sample": None, "total": 0.0})
         for item in self._enriched_data:
-            c = groups[item['category']]
-            c["cycles"][item['cycle']] += item['amount']
-            c["total"] += item['amount']
+            c = groups[item.category]
+            c["cycles"][item.cycle] += item.amount
+            c["total"] += item.amount
             if not c["sample"]:
-                c["sample"] = {'label': item['label'], 'amount': item['raw_amount']}
+                c["sample"] = {'label': item.label, 'amount': item.raw_amount}
         return groups
 
     def _create_dto(self, name, data, total_cycles, strategy, config) -> ProcessedCategory:
@@ -135,11 +142,19 @@ class Orchestrator:
         std = math.sqrt(sum((x - mean)**2 for x in history) / n)
         return CategoryStats(float(median), float(std), n, float(n/total_cycles) if total_cycles else 0.0)
 
-    def _define_cycles(self) -> List[Dict[str, Any]]:
+    def _define_cycles(self) -> List[EnrichedTransaction]:
         pay_dates = sorted({t.dateOperation for t in self.transactions if t.category == ANCHOR_CATEGORY})
         enriched = []
         for t in self.transactions:
             past = [p for p in pay_dates if p <= t.dateOperation]
             lbl = f"Cycle_du_{max(past).strftime('%Y-%m-%d')}" if past else "Initial"
-            enriched.append({'category': t.category, 'amount': abs(t.amount), 'raw_amount': t.amount, 'label': t.label, 'cycle': lbl})
+            enriched.append(
+                EnrichedTransaction(
+                    category=t.category,
+                    amount=abs(t.amount),
+                    raw_amount=t.amount,
+                    label=t.label,
+                    cycle=lbl,
+                )
+            )
         return enriched

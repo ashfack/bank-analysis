@@ -60,7 +60,9 @@ if st.button("🚀 Synchronize & Optimize", width="stretch"):
                 )
 
                 st.session_state['budget_view'] = result.view
-                st.session_state['raw_data'] = pd.DataFrame(result.reporting_data)
+                st.session_state['raw_data'] = pd.DataFrame(
+                    [vars(item) for item in result.reporting_data]
+                )
                 st.session_state['report_bytes'] = result.report_bytes
                 st.session_state['quality_report'] = result.quality
                 st.session_state['processed'] = True

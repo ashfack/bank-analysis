@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import Dict, Any, List
 from budgeter.budget_status import get_budget_status
-from model.models import BudgetView, ProcessedCategory
+from model.models import BudgetView, EnrichedTransaction
 
 class ExcelArchitect:
     def __init__(self, output_path: str):
@@ -10,7 +10,7 @@ class ExcelArchitect:
         self.sheet_mapping = "🔍 AI Mapping"
         self.sheet_details = "📝 Ledger"
 
-    def generate(self, view: BudgetView, raw_transactions: List[Dict]):
+    def generate(self, view: BudgetView, raw_transactions: List[EnrichedTransaction]):
         """
         The Main Entry Point.
         Uses BudgetView for summary and raw_transactions for the deep-dive ledger.
@@ -40,8 +40,8 @@ class ExcelArchitect:
             data.append(row)
         return pd.DataFrame(data).set_index("cycle")
 
-    def _prepare_ledger_df(self, view: BudgetView, raw_transactions: List[Dict]) -> pd.DataFrame:
-        df = pd.DataFrame(raw_transactions)
+    def _prepare_ledger_df(self, view: BudgetView, raw_transactions: List[EnrichedTransaction]) -> pd.DataFrame:
+        df = pd.DataFrame([vars(item) for item in raw_transactions])
         # Ensure AI-discovered clusters are attached to the ledger
         cat_map = {c.category: c.master_cluster for c in view.processed_categories}
         df['master_cluster'] = df['category'].map(cat_map)

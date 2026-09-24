@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 from unittest.mock import MagicMock, patch
-from model.models import ProcessedCategory, BudgetView
+from model.models import BudgetView, EnrichedTransaction, ProcessedCategory
 from report_generator.excel_architect import ExcelArchitect
 
 class TestExcelArchitect:
@@ -52,7 +52,13 @@ class TestExcelArchitect:
     
         # Raw transactions for the ledger
         enriched_mock = [
-            {'category': 'Rent', 'amount': 1000.0, 'cycle': 'C1', 'dateOperation': pd.Timestamp('2026-01-01')}
+            EnrichedTransaction(
+                category='Rent',
+                amount=1000.0,
+                raw_amount=-1000.0,
+                label='Home payment',
+                cycle='C1',
+            )
         ]
 
         with patch("pandas.DataFrame.to_excel"):

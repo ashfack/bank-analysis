@@ -25,7 +25,7 @@ def _orchestrator(last_expense: float) -> Orchestrator:
 def test_temporal_validation_keeps_latest_cycle_out_of_training():
     training, validation = StrategyAutoTuner._prepare_temporal_validation(_orchestrator(900.0))
 
-    assert {item["cycle"] for item in training.reporting_data} == {
+    assert {item.cycle for item in training.reporting_data} == {
         "Cycle_du_2026-01-01",
         "Cycle_du_2026-02-01",
     }

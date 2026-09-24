@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, List
+from typing import List
 
 from auto_tuner.strategy_auto_tuner import StrategyAutoTuner
 from loader.data_loader import DataLoader
-from model.models import BudgetDomain, BudgetView, DataQualityReport
+from model.models import BudgetDomain, BudgetView, DataQualityReport, EnrichedTransaction
 from orchestrator import Orchestrator
 from report_generator.excel_architect import ExcelArchitect
 
@@ -13,7 +13,7 @@ from report_generator.excel_architect import ExcelArchitect
 @dataclass(frozen=True)
 class AnalysisResult:
     view: BudgetView
-    reporting_data: List[Dict[str, Any]]
+    reporting_data: List[EnrichedTransaction]
     report_bytes: bytes
     quality: DataQualityReport
 

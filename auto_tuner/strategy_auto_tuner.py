@@ -72,9 +72,9 @@ class StrategyAutoTuner:
     ) -> Tuple["Orchestrator", Dict[str, List[Tuple[str, float]]]]:
         """Fit on earlier cycles and reserve the most recent 20% for scoring."""
         cycle_names = sorted({
-            item['cycle']
+            item.cycle
             for item in orchestrator.reporting_data
-            if item['cycle'] != "Initial"
+            if item.cycle != "Initial"
         })
 
         if len(cycle_names) < 2:
@@ -85,12 +85,12 @@ class StrategyAutoTuner:
         training_transactions = [
             transaction
             for transaction, item in zip(orchestrator.transactions, orchestrator.reporting_data)
-            if item['cycle'] not in validation_cycles
+            if item.cycle not in validation_cycles
         ]
         validation_data = [
             item
             for item in orchestrator.reporting_data
-            if item['cycle'] in validation_cycles
+            if item.cycle in validation_cycles
         ]
 
         training_domain = BudgetDomain(
@@ -107,7 +107,7 @@ class StrategyAutoTuner:
         cat_cycle_map = defaultdict(lambda: defaultdict(float))
 
         for item in reporting_data:
-            cat_cycle_map[item['category']][item['cycle']] += item['amount']
+            cat_cycle_map[item.category][item.cycle] += item.amount
 
         for cat, cycles in cat_cycle_map.items():
             cycle_history[cat] = list(cycles.items())

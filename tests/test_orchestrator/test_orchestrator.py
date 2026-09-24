@@ -92,8 +92,8 @@ class TestOrchestratorCoverage:
         domain = BudgetDomain(transactions, {"Misc": "Other", ANCHOR_CATEGORY: "In"}, {})
         orch = Orchestrator(domain)
         
-        early_buy = next(item for item in orch.reporting_data if item['label'] == "EARLY_BUY")
-        assert early_buy['cycle'] == "Initial"
+        early_buy = next(item for item in orch.reporting_data if item.label == "EARLY_BUY")
+        assert early_buy.cycle == "Initial"
 
     def test_zero_median_cluster_distribution(self):
         """Tests fallback distribution when cluster members have 0 historical spending."""

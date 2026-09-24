@@ -12,6 +12,17 @@ class Transaction:
     amount: float
     category: str
 
+
+@dataclass(frozen=True)
+class EnrichedTransaction:
+    """Transaction projected into a financial cycle for downstream reporting."""
+
+    category: str
+    amount: float
+    raw_amount: float
+    label: str
+    cycle: str
+
 @dataclass(frozen=True)
 class BudgetDomain:
     """The complete 'Input State' for the Orchestrator."""
