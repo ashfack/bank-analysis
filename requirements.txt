@@ -1,13 +1,4 @@
-fastapi
-uvicorn[standard]
-
-pandas
-xlsxwriter
-numpy
-scikit-learn
-pytest
-pytest-cov
-
-streamlit
-matplotlib
-plotly
+numpy>=2.0,<3
+pandas>=2.2,<4
+streamlit>=1.55,<2
+xlsxwriter>=3.2,<4

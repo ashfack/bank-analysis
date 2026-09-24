@@ -11,8 +11,8 @@ WORKDIR /home/user/app
 
 # Step 3: Copy requirements and install
 # We do this before copying the whole app to leverage Docker's cache
-COPY --chown=user requirements.txt .
-RUN pip install --no-cache-dir --upgrade -r requirements.txt
+COPY --chown=user requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir --upgrade -r requirements-dev.txt
 
 # Step 4: Copy the rest of the application
 # Using --chown=user ensures our non-root user owns the files
