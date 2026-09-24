@@ -3,13 +3,17 @@ from unittest.mock import patch
 import pytest
 import pandas as pd
 from io import StringIO
-from loader.data_loader import DataLoader
+from infrastructure.csv_readers import (
+    BudgetCsvReader,
+    MappingCsvReader,
+    TransactionCsvReader,
+)
 from model.models import Transaction
 from config.config import (
     COL_RAW_DATE, COL_RAW_AMOUNT, COL_RAW_CATEGORY, DOMAIN_DATE
 )
 
-class TestDataLoader:
+class TestCsvReaders:
 
     @pytest.fixture
     def raw_csv_content(self):
@@ -41,7 +45,7 @@ class TestDataLoader:
         path = tmp_path / "transactions.csv"
         path.write_text(raw_csv_content, encoding='utf-8')
 
-        transactions = DataLoader.prepare_transaction_data(str(path))
+        transactions = TransactionCsvReader().read(str(path))
 
         assert len(transactions) == 3
         assert isinstance(transactions[0], Transaction)
@@ -57,7 +61,7 @@ class TestDataLoader:
         path = tmp_path / "transactions.csv"
         path.write_text(raw_csv_content, encoding='utf-8')
 
-        transactions = DataLoader.prepare_transaction_data(str(path))
+        transactions = TransactionCsvReader().read(str(path))
 
         # Original order was Jan 1, Jan 5, Jan 3. 
         # Sorted should be Jan 1, Jan 3, Jan 5.
@@ -71,7 +75,7 @@ class TestDataLoader:
         path.write_text("wrong_col;another_col\n1;2", encoding='utf-8')
 
         with pytest.raises(ValueError, match="missing required columns"):
-            DataLoader.prepare_transaction_data(str(path))
+            TransactionCsvReader().read(str(path))
 
     def test_count_duplicate_transactions_counts_only_repeated_rows(self, tmp_path):
         path = tmp_path / "transactions.csv"
@@ -83,11 +87,11 @@ class TestDataLoader:
             encoding="utf-8",
         )
 
-        assert DataLoader.count_duplicate_transactions(str(path)) == 1
+        assert TransactionCsvReader().count_duplicates(str(path)) == 1
 
     def test_count_duplicate_transactions_requires_an_input_file(self):
         with pytest.raises(FileNotFoundError, match="Input data not found"):
-            DataLoader.count_duplicate_transactions("missing-transactions.csv")
+            TransactionCsvReader().count_duplicates("missing-transactions.csv")
 
     # --- 2. Testing Mapping & Overrides ---
 
@@ -95,7 +99,7 @@ class TestDataLoader:
         path = tmp_path / "map.csv"
         path.write_text("category;cluster\nRent;Fixed\nFood;Lifestyle", encoding='utf-8')
 
-        mapping = DataLoader.load_category_cluster_map(str(path))
+        mapping = MappingCsvReader().read(str(path))
         assert mapping == {"Rent": "Fixed", "Food": "Lifestyle"}
 
     def test_load_category_cluster_map_rejects_duplicates(self, tmp_path):
@@ -106,14 +110,14 @@ class TestDataLoader:
         )
 
         with pytest.raises(ValueError, match="Duplicate category mappings: Transfer"):
-            DataLoader.load_category_cluster_map(str(path))
+            MappingCsvReader().read(str(path))
 
     def test_load_budget_overrides_with_comments(self, tmp_path, override_content):
         """Ensures the parser ignores # comments and empty lines."""
         path = tmp_path / "overrides.csv"
         path.write_text(override_content, encoding='utf-8')
 
-        overrides = DataLoader.load_budget_overrides(str(path))
+        overrides = BudgetCsvReader().read(str(path))
         
         assert len(overrides) == 2
         assert overrides["Rent"] == "1250"
@@ -124,13 +128,13 @@ class TestDataLoader:
 
     def test_missing_files_returns_empty(self):
         """Graceful fallback for non-essential files."""
-        assert DataLoader.load_category_cluster_map("ghost.csv") == {}
-        assert DataLoader.load_budget_overrides("ghost.csv") == {}
+        assert MappingCsvReader().read("ghost.csv") == {}
+        assert BudgetCsvReader().read("ghost.csv") == {}
 
     def test_prepare_data_file_not_found(self):
         """Essential files should raise a FileNotFoundError."""
         with pytest.raises(FileNotFoundError):
-            DataLoader.prepare_transaction_data("critical_missing.csv")
+            TransactionCsvReader().read("critical_missing.csv")
 
     # --- FIX FOR LINE 22: Wrong Mapping Headers ---
     def test_load_mapping_wrong_headers(self, tmp_path):
@@ -139,7 +143,7 @@ class TestDataLoader:
         # Using wrong column names
         path.write_text("wrong_col;another_wrong_col\nValue1;Value2", encoding='utf-8')
         
-        mapping = DataLoader.load_category_cluster_map(str(path))
+        mapping = MappingCsvReader().read(str(path))
         assert mapping == {} # Should return empty because headers don't match
 
     # --- FIX FOR LINE 42: Catastrophic Exception ---
@@ -150,7 +154,7 @@ class TestDataLoader:
         
         # We mock pd.read_csv to throw an error when it touches this specific method
         with patch("pandas.read_csv", side_effect=Exception("Catastrophic Failure")):
-            result = DataLoader.load_budget_overrides(str(path))
+            result = BudgetCsvReader().read(str(path))
             assert result == {} # Should catch the exception and return empty dict
 
     def test_prepare_transaction_data_preserves_negative_european_amounts(self, tmp_path):
@@ -167,7 +171,7 @@ class TestDataLoader:
         )
         path.write_text(content, encoding='utf-8')
 
-        transactions = DataLoader.prepare_transaction_data(str(path))
+        transactions = TransactionCsvReader().read(str(path))
         
         # Check the Supermarket transaction
         supermarket = next(t for t in transactions if t.label == "Supermarket")

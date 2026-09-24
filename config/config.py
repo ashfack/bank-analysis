@@ -23,7 +23,7 @@ MANUAL_MODE = False
 ACTIVE_STRATEGY = BudgetStrategy.HYBRID_VOLATILITY
 MANUAL_PARAMS = StrategyConfig(percentile_target=80, safety_multiplier=1.15)
 
-# --- DataLoader Config ---
+# --- CSV adapter configuration ---
 CSV_SEP = ';'
 ENCODING = 'utf-8'
 
